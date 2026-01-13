@@ -1,0 +1,9 @@
+﻿node_modules/
+.env
+*.log
+.DS_Store
+.vscode/settings.json
+Thumbs.db
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
