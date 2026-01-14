@@ -587,7 +587,7 @@ const exportAllData = () => {
   return (
     <div className="home-page">
       <div className="sidebar">
-        <h1 className="nrv-logo">NRV</h1>
+        <h1 className="nrv-logo">SRV</h1>
         {['home', 'purchase', 'pay', 'return', 'balance', 'party', 'bank', 'salary'].map(btn => (
           <button key={btn} style={{ marginBottom: '15px' }} onClick={() => setView(btn)}>
             {btn.charAt(0).toUpperCase() + btn.slice(1)}
@@ -630,7 +630,7 @@ const exportAllData = () => {
 
         {view === 'home' && (
           <>
-            <h1> RAMACHANDRA VELHAL</h1>
+            <h1>SANJIVANI SADI</h1>
             <h3>Total Owed to All Parties: ₹{(totalOwed || 0).toFixed(2)}</h3>
             <h4>
               All Transactions <br />
