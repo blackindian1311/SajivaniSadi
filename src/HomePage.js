@@ -630,7 +630,7 @@ const exportAllData = () => {
 
         {view === 'home' && (
           <>
-            <h1>NANDKUMAR RAMACHANDRA VELHAL</h1>
+            <h1>Sanjivani VELHAL</h1>
             <h3>Total Owed to All Parties: ₹{(totalOwed || 0).toFixed(2)}</h3>
             <h4>
               All Transactions <br />
