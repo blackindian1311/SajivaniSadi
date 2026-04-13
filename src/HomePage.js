@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import './App.css';
 import { db } from "./firebase";
-import { collection, addDoc, updateDoc, doc, getDoc, setDoc, onSnapshot } from "firebase/firestore";
+import {
+  collection, addDoc, updateDoc, doc, setDoc, onSnapshot,
+  deleteDoc, query, where, getDocs
+} from "firebase/firestore";
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import 'jspdf-autotable';
@@ -9,18 +12,17 @@ import 'jspdf-autotable';
 // Helper for numbers
 const asNumber = v => Number(typeof v === "string" ? v.replace(/,/g, "") : v) || 0;
 
-const PartyInfoTable = ({ parties = [] }) => {
+const PartyInfoTable = ({ parties = [], onDeleteParty }) => {
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const rowsPerPage = 7;
 
-  const filtered = parties
-    .filter(p =>
-      (p.businessName || '').toLowerCase().includes(search.toLowerCase()) ||
-      (p.contactName || '').toLowerCase().includes(search.toLowerCase()) ||
-      (p.phoneNumber || '').includes(search) ||
-      (p.contactMobile || '').includes(search)
-    );
+  const filtered = parties.filter(p =>
+    (p.businessName || '').toLowerCase().includes(search.toLowerCase()) ||
+    (p.contactName || '').toLowerCase().includes(search.toLowerCase()) ||
+    (p.phoneNumber || '').includes(search) ||
+    (p.contactMobile || '').includes(search)
+  );
 
   const totalPages = Math.ceil(filtered.length / rowsPerPage);
   const shown = filtered.slice((page - 1) * rowsPerPage, page * rowsPerPage);
@@ -31,10 +33,10 @@ const PartyInfoTable = ({ parties = [] }) => {
         type="text"
         value={search}
         placeholder="Search party..."
-        onChange={e=>{setSearch(e.target.value); setPage(1);}}
+        onChange={e => { setSearch(e.target.value); setPage(1); }}
         style={{ marginBottom: '10px', padding: '5px', width: '100%' }}
       />
-      <div style={{overflowX:'auto'}}>
+      <div style={{ overflowX: 'auto' }}>
         <table className="transaction-table">
           <thead>
             <tr>
@@ -44,12 +46,13 @@ const PartyInfoTable = ({ parties = [] }) => {
               <th>Bank name</th>
               <th>Contact</th>
               <th>Mobile</th>
+              <th>Delete</th>
             </tr>
           </thead>
           <tbody>
             {shown.length === 0 && (
               <tr>
-                <td colSpan={6} style={{textAlign:'center', color:'#888'}}>No parties found.</td>
+                <td colSpan={7} style={{ textAlign: 'center', color: '#888' }}>No parties found.</td>
               </tr>
             )}
             {shown.map((p, i) =>
@@ -60,27 +63,36 @@ const PartyInfoTable = ({ parties = [] }) => {
                 <td>{p.bankName}</td>
                 <td>{p.contactName}</td>
                 <td>{p.contactMobile}</td>
+                <td>
+                  <button
+                    onClick={() => onDeleteParty && onDeleteParty(p)}
+                    style={{ padding: '4px 6px', fontSize: '11px', color: 'white', background: '#dc3545', border: 'none', borderRadius: '3px' }}
+                  >
+                    Del
+                  </button>
+                </td>
               </tr>
             )}
           </tbody>
         </table>
       </div>
-      <div style={{marginTop:8,textAlign:'center'}}>
+      <div style={{ marginTop: 8, textAlign: 'center' }}>
         Page {page}/{totalPages || 1}
         <br />
-        <button disabled={page<=1} onClick={()=>setPage(page-1)}>Previous</button>
-        <button disabled={page>=totalPages} onClick={()=>setPage(page+1)} style={{marginLeft:8}}>Next</button>
+        <button disabled={page <= 1} onClick={() => setPage(page - 1)}>Previous</button>
+        <button disabled={page >= totalPages} onClick={() => setPage(page + 1)} style={{ marginLeft: 8 }}>Next</button>
       </div>
     </div>
   );
 };
+
 function CommentModal({ tx, onClose }) {
   if (!tx) return null;
   return (
     <div className="modal">
-      <div style={{maxWidth:400, minWidth:300, margin:'auto', border:'1px solid #bbb', borderRadius:6, background:'#fff', padding:20}}>
+      <div style={{ maxWidth: 400, minWidth: 300, margin: 'auto', border: '1px solid #bbb', borderRadius: 6, background: '#fff', padding: 20 }}>
         <h3>Transaction Details</h3>
-        <div style={{marginBottom: 12}}>
+        <div style={{ marginBottom: 12 }}>
           <div><strong>Type:</strong> {tx.type}</div>
           <div><strong>Date:</strong> {tx.date}</div>
           <div><strong>Party:</strong> {tx.party}</div>
@@ -91,11 +103,11 @@ function CommentModal({ tx, onClose }) {
         </div>
         <div>
           <strong>Comment:</strong>
-          <div style={{marginTop:3, fontStyle: 'italic', color: '#222'}}>
-            {tx.comment || <span style={{color:'#999'}}>No comment provided.</span>}
+          <div style={{ marginTop: 3, fontStyle: 'italic', color: '#222' }}>
+            {tx.comment || <span style={{ color: '#999' }}>No comment provided.</span>}
           </div>
         </div>
-        <button onClick={onClose} style={{marginTop:15}}>Close</button>
+        <button onClick={onClose} style={{ marginTop: 15 }}>Close</button>
       </div>
     </div>
   );
@@ -133,7 +145,11 @@ const HomePage = () => {
   });
   const [showPartyForm, setShowPartyForm] = useState(false);
 
-  // Real-time listeners for all main Firestore collections
+  // State for export date range
+  const [exportStartDate, setExportStartDate] = useState('');
+  const [exportEndDate, setExportEndDate] = useState('');
+
+  // Real-time listeners
   useEffect(() => {
     const partySnap = onSnapshot(collection(db, "parties"), snapshot => {
       setPartiesInfo(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
@@ -147,11 +163,10 @@ const HomePage = () => {
     const unsubRet = onSnapshot(collection(db, "returns"), snap => {
       setReturnTransactions(snap.docs.map(doc => ({ id: doc.id, type: 'return', ...doc.data() })));
     });
+    // Store id for bank deposits so we can delete them
     const unsubDeposits = onSnapshot(collection(db, "bankDeposits"), snap => {
-      setBankDeposits(snap.docs.map(doc => ({ ...doc.data() })));
+      setBankDeposits(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     });
-    
-    // Real-time listener for bank balance - AUTO REFRESH
     const unsubBankBalance = onSnapshot(doc(db, "meta", "bank"), (docSnap) => {
       if (docSnap.exists()) {
         setBankBalance(docSnap.data().balance || 0);
@@ -166,11 +181,10 @@ const HomePage = () => {
       unsubPay();
       unsubRet();
       unsubDeposits();
-      unsubBankBalance(); // Clean up bank balance listener
+      unsubBankBalance();
     };
   }, []);
 
-  // All transactions (descending date order)
   const allTransactions = [
     ...purchaseTransactions, ...paymentTransactions, ...returnTransactions
   ].sort((a, b) => new Date(b.date) - new Date(a.date));
@@ -185,45 +199,44 @@ const HomePage = () => {
     return total;
   }, 0);
 
-  // FIXED BANK LEDGER: properly handles deposits and payments without duplication
   const getBankLedger = () => {
     let ledger = [];
-    
-    // Add manual deposits/withdrawals from bankDeposits collection
+
     bankDeposits.forEach(d => {
-      // Skip negative amounts that are created by payment transactions to avoid duplication
       if (d.isPaymentDeduction !== true) {
         ledger.push({
+          id: d.id,
           date: d.date,
           party: d.party || '-',
           method: 'Deposit',
           checkNumber: '-',
           debit: d.amount < 0 ? Math.abs(asNumber(d.amount)) : null,
           credit: d.amount > 0 ? asNumber(d.amount) : null,
-          type: 'deposit'
+          type: 'deposit',
+          source: 'bankDeposits',
+          isPaymentDeduction: false
         });
       }
     });
 
-    // Add NEFT/Check payments as debits
     paymentTransactions.forEach(p => {
       if (p.method === "NEFT" || p.method === "Check") {
         ledger.push({
+          id: p.id,
           date: p.date,
           party: p.party,
           method: p.method,
           checkNumber: p.checkNumber || '-',
           debit: asNumber(p.amount),
           credit: null,
-          type: "payment"
+          type: "payment",
+          source: 'payments',
+          isPaymentDeduction: true
         });
       }
     });
 
-    // Sort by date (descending)
     ledger.sort((a, b) => new Date(b.date) - new Date(a.date));
-    
-    // Calculate running balance (ascending order first, then reverse)
     let asc = ledger.slice().sort((a, b) => new Date(a.date) - new Date(b.date));
     let balance = 0;
     const ledgerWithBalance = asc.map(entry => {
@@ -247,14 +260,76 @@ const HomePage = () => {
     comment: ''
   });
 
+  // ── DELETE PARTY ──
+  const handleDeleteParty = async (party) => {
+    if (!window.confirm(`Delete party "${party.businessName}"? This will NOT delete their transactions.`)) return;
+    try {
+      await deleteDoc(doc(db, "parties", party.id));
+      alert('Party deleted.');
+    } catch (e) {
+      console.error(e);
+      alert('Failed to delete party.');
+    }
+  };
+
+  // ── DELETE TRANSACTION ──
+  const handleDeleteTransaction = async (tx) => {
+    const msg =
+      tx.type === 'purchase' ? `Delete purchase ₹${asNumber(tx.amount).toFixed(2)} for ${tx.party}?` :
+      tx.type === 'payment'  ? `Delete ${tx.method || ''} payment ₹${asNumber(tx.amount).toFixed(2)} for ${tx.party}?` :
+      `Delete return ₹${asNumber(tx.amount).toFixed(2)} for ${tx.party}?`;
+    if (!window.confirm(msg)) return;
+    try {
+      const coll = tx.type === 'purchase' ? 'purchases' : tx.type === 'payment' ? 'payments' : 'returns';
+
+      // If deleting a non-cash payment, reverse the bank balance and remove linked bankDeposit entry
+      if (tx.type === 'payment' && tx.method && tx.method !== 'Cash') {
+        const amount = asNumber(tx.amount);
+        await setDoc(doc(db, 'meta', 'bank'), { balance: asNumber(bankBalance) + amount });
+
+        const bdRef = collection(db, 'bankDeposits');
+        const snap = await getDocs(query(bdRef, where('isPaymentDeduction', '==', true)));
+        const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        let match = list.find(d =>
+          asNumber(d.amount) === -amount &&
+          (d.party || '') === (tx.party || '') &&
+          String(d.date) === String(tx.date)
+        );
+        if (!match) match = list.find(d => asNumber(d.amount) === -amount);
+        if (match) await deleteDoc(doc(db, 'bankDeposits', match.id));
+      }
+
+      await deleteDoc(doc(db, coll, tx.id));
+      alert('Transaction deleted.');
+    } catch (e) {
+      console.error(e);
+      alert('Failed to delete transaction.');
+    }
+  };
+
+  // ── DELETE BANK ENTRY ──
+  const handleDeleteBankEntry = async (entry) => {
+    if (entry.type !== 'deposit' || entry.source !== 'bankDeposits' || entry.isPaymentDeduction === true) {
+      alert('Only manual deposit entries can be deleted here.');
+      return;
+    }
+    if (!window.confirm('Delete this bank entry and reverse the balance?')) return;
+    try {
+      const delta = entry.credit ? -entry.credit : entry.debit ? entry.debit : 0;
+      await setDoc(doc(db, 'meta', 'bank'), { balance: asNumber(bankBalance) + delta });
+      await deleteDoc(doc(db, 'bankDeposits', entry.id));
+      alert('Bank entry deleted.');
+    } catch (e) {
+      console.error(e);
+      alert('Failed to delete bank entry.');
+    }
+  };
+
   const handleAddParty = async () => {
     const f = partyInput;
     if (f.businessName && f.phoneNumber && f.bankNumber && f.contactName && f.contactMobile && f.bankName) {
-      const newParty = { ...f };
-      await addDoc(collection(db, "parties"), newParty);
-      setPartyInput({
-        businessName: '', phoneNumber: '', bankNumber: '', contactName: '', contactMobile: '', bankName: ''
-      });
+      await addDoc(collection(db, "parties"), { ...f });
+      setPartyInput({ businessName: '', phoneNumber: '', bankNumber: '', contactName: '', contactMobile: '', bankName: '' });
       setShowPartyForm(false);
     } else alert('Please fill all fields.');
   };
@@ -267,18 +342,16 @@ const HomePage = () => {
     const baseAmt = asNumber(amount);
     if (baseAmt <= 0) { alert("Enter valid amount"); return; }
     const gst = baseAmt * 0.05, totalWithGst = Math.round(baseAmt + gst);
-    const newPurchase = {
+    await addDoc(collection(db, "purchases"), {
       type: 'purchase', amount: totalWithGst, gstAmount: gst, baseAmount: baseAmt,
       party: selectedParty, billNumber, date,
-    };
-    await addDoc(collection(db, "purchases"), newPurchase);
+    });
     clearFormFields();
   };
 
   const handleAddPayment = async () => {
     const { payment, paymentMethod, date, checkNumber } = form;
     const amountToPay = asNumber(payment);
-
     if (!payment || !paymentMethod || !date || !selectedParty) {
       alert('Fill all payment fields.'); return;
     }
@@ -289,27 +362,16 @@ const HomePage = () => {
     if (paymentMethod !== 'Cash' && bankBalance < amountToPay) {
       alert('Not Enough Money in the Bank'); return;
     }
-
-    const newPayment = {
+    await addDoc(collection(db, "payments"), {
       type: 'payment', amount: amountToPay,
       method: paymentMethod, party: selectedParty, date,
       checkNumber: paymentMethod === 'Check' ? checkNumber : null
-    };
-
-    await addDoc(collection(db, "payments"), newPayment);
-    
-    // For non-cash payments, update bank balance
+    });
     if (paymentMethod !== 'Cash') {
-      const updatedBalance = bankBalance - amountToPay;
-      await setDoc(doc(db, "meta", "bank"), { balance: updatedBalance });
-      
-      // Add a bank deposit entry marked as payment deduction to avoid duplication in ledger
+      await setDoc(doc(db, "meta", "bank"), { balance: bankBalance - amountToPay });
       await addDoc(collection(db, "bankDeposits"), {
-        amount: -amountToPay,
-        date,
-        party: selectedParty,
-        isPaymentDeduction: true, // Flag to identify this is from a payment
-        paymentMethod: paymentMethod
+        amount: -amountToPay, date, party: selectedParty,
+        isPaymentDeduction: true, paymentMethod
       });
     }
     clearFormFields();
@@ -321,15 +383,11 @@ const HomePage = () => {
       alert('Fill all return fields.'); return;
     }
     if (!comment.trim()) { alert('Please provide a comment for the return.'); return; }
-    const newReturn = {
-      type: 'return',
-      amount: asNumber(returnAmount),
-      party: selectedParty,
-      date: returnDate,
-      billNumber: billNumber || null,
-      comment
-    };
-    await addDoc(collection(db, "returns"), newReturn);
+    await addDoc(collection(db, "returns"), {
+      type: 'return', amount: asNumber(returnAmount),
+      party: selectedParty, date: returnDate,
+      billNumber: billNumber || null, comment
+    });
     clearFormFields();
   };
 
@@ -337,17 +395,11 @@ const HomePage = () => {
     const amount = asNumber(depositAmount);
     const dateToUse = depositDate || new Date().toISOString();
     if (amount > 0) {
-      const updated = bankBalance + amount;
-      // Update bank balance
-      await setDoc(doc(db, "meta", "bank"), { balance: updated });
-      // Add deposit entry
+      await setDoc(doc(db, "meta", "bank"), { balance: bankBalance + amount });
       await addDoc(collection(db, "bankDeposits"), {
-        amount,
-        date: dateToUse,
-        isPaymentDeduction: false // This is a manual deposit
+        amount, date: dateToUse, isPaymentDeduction: false
       });
-      setDepositAmount('');
-      setDepositDate('');
+      setDepositAmount(''); setDepositDate('');
     } else alert('Please enter a valid number');
   };
 
@@ -367,19 +419,18 @@ const HomePage = () => {
 
   const handleEditSave = async () => {
     const tx = editingTransaction;
-    if (!editForm.amount || !editForm.date) {
-      alert("Fill all required fields."); return;
-    }
+    if (!editForm.amount || !editForm.date) { alert("Fill all required fields."); return; }
     let coll = tx.type === "purchase" ? "purchases" : tx.type === "payment" ? "payments" : "returns";
     let newData = { ...tx, ...editForm, amount: asNumber(editForm.amount), billNumber: editForm.billNumber || null, comment: editForm.comment || "" };
     await updateDoc(doc(db, coll, tx.id), newData);
     setEditingTransaction(null); setEditForm({});
   };
+
   const handleEditCancel = () => { setEditingTransaction(null); setEditForm({}); };
 
-  const TransactionTable = ({ transactions, onEdit, onSeeComment }) => {
-    const txs = transactions.slice().sort((a, b) => new Date(b.date) - new Date(a.date)); // DESCENDING
-    // Running balance logic per party
+  // TransactionTable now has a Delete column
+  const TransactionTable = ({ transactions, onEdit, onSeeComment, onDelete }) => {
+    const txs = transactions.slice().sort((a, b) => new Date(b.date) - new Date(a.date));
     const runningBalances = {};
     const sortedByParty = {};
     transactions.forEach(tx => {
@@ -413,18 +464,18 @@ const HomePage = () => {
               <th>Credit</th>
               <th>Balance</th>
               <th>Edit</th>
-              <th>See Comment</th>
+              <th>Comment</th>
+              <th>Delete</th>
             </tr>
           </thead>
           <tbody>
             {txs.map((tx, i) => {
-              const party = tx.party || "";
               const debit = tx.type === 'purchase' ? asNumber(tx.amount) : null;
               const credit = (tx.type === 'payment' || tx.type === 'return') ? asNumber(tx.amount) : null;
               const gst = tx.type === 'purchase'
                 ? '₹' + (tx.gstAmount !== undefined
                   ? Number(tx.gstAmount).toFixed(2)
-                  : ((asNumber(tx.amount)/1.05)*0.05).toFixed(2))
+                  : ((asNumber(tx.amount) / 1.05) * 0.05).toFixed(2))
                 : '-';
               return (
                 <tr key={tx.id || i}>
@@ -439,10 +490,22 @@ const HomePage = () => {
                   <td>{debit !== null ? `₹${asNumber(debit).toFixed(2)}` : '-'}</td>
                   <td>{credit !== null ? `₹${asNumber(credit).toFixed(2)}` : '-'}</td>
                   <td>₹{runningBalances[tx.id] !== undefined ? asNumber(runningBalances[tx.id]).toFixed(2) : '-'}</td>
-                  <td><button onClick={() => onEdit ? onEdit(tx) : null}>Edit</button></td>
-                  <td>{tx.comment ? (
-                    <button onClick={() => onSeeComment && onSeeComment(tx)}>See Comment</button>
-                  ) : ''}</td>
+                  <td>
+                    <button onClick={() => onEdit && onEdit(tx)}>Edit</button>
+                  </td>
+                  <td>
+                    {tx.comment
+                      ? <button onClick={() => onSeeComment && onSeeComment(tx)}>See Comment</button>
+                      : ''}
+                  </td>
+                  <td>
+                    <button
+                      onClick={() => onDelete && onDelete(tx)}
+                      style={{ padding: '4px 6px', fontSize: '11px', color: 'white', background: '#dc3545', border: 'none', borderRadius: '3px' }}
+                    >
+                      Del
+                    </button>
+                  </td>
                 </tr>
               );
             })}
@@ -458,132 +521,80 @@ const HomePage = () => {
       type === "payment" ? paymentTransactions : returnTransactions
     )
       .filter(tx => tx.party === party)
-      .sort((a, b) => new Date(b.date) - new Date(a.date)); // DESCENDING
+      .sort((a, b) => new Date(b.date) - new Date(a.date));
     if (sectionTx.length === 0)
-      return <div style={{marginTop:12,color:'#888'}}>No {type}s for this party.</div>;
+      return <div style={{ marginTop: 12, color: '#888' }}>No {type}s for this party.</div>;
     return (
-      <div style={{marginTop:18}}>
-        <h4>Recent {type.charAt(0).toUpperCase()+type.slice(1)} History</h4>
-        <TransactionTable transactions={sectionTx.slice(0,6)} onEdit={handleEditClick} onSeeComment={setCommentTxModal} />
+      <div style={{ marginTop: 18 }}>
+        <h4>Recent {type.charAt(0).toUpperCase() + type.slice(1)} History</h4>
+        <TransactionTable
+          transactions={sectionTx.slice(0, 6)}
+          onEdit={handleEditClick}
+          onSeeComment={setCommentTxModal}
+          onDelete={handleDeleteTransaction}
+        />
       </div>
     );
   };
 
   const downloadCSV = (filename, rows) => {
-  const csvContent = rows.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')).join('\n');
-  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.setAttribute('download', filename);
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
-};
+    const csvContent = rows.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')).join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', filename);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
 
-// PDF export helper placeholder
-const exportPDF = () => {
-  const from = new Date(exportStartDate);
-  const to = new Date(exportEndDate);
-  to.setHours(23, 59, 59, 999);
+  const exportPDF = () => {
+    const from = new Date(exportStartDate);
+    const to = new Date(exportEndDate);
+    to.setHours(23, 59, 59, 999);
+    const d = new jsPDF();
+    d.text("Velhal Bookkeeping Summary", 14, 15);
+    const txRows = allTransactions.filter(tx => {
+      const txDate = new Date(tx.date);
+      return txDate >= from && txDate <= to;
+    }).map(tx => [tx.date, tx.party, tx.type, asNumber(tx.amount), tx.method || '', tx.billNumber || '', tx.checkNumber || '']);
+    autoTable(d, {
+      startY: 20,
+      head: [["Date", "Party", "Type", "Amount", "Method", "Bill No", "Check No"]],
+      body: txRows,
+      theme: 'striped',
+      headStyles: { fillColor: [41, 128, 185] }
+    });
+    d.save("velhal_summary.pdf");
+  };
 
-  const doc = new jsPDF();
-  doc.text("Velhal Bookkeeping Summary", 14, 15);
+  const exportAllData = () => {
+    const from = new Date(exportStartDate);
+    const to = new Date(exportEndDate);
+    to.setHours(23, 59, 59, 999);
+    const allTxRows = [['Date', 'Party', 'Type', 'Amount', 'GST', 'Method', 'Bill No', 'Check No', 'Comment']];
+    allTransactions.forEach(tx => {
+      const txDate = new Date(tx.date);
+      if (txDate >= from && txDate <= to) {
+        allTxRows.push([tx.date, tx.party, tx.type, asNumber(tx.amount), tx.gstAmount || '', tx.method || '', tx.billNumber || '', tx.checkNumber || '', tx.comment || '']);
+      }
+    });
+    const partyRows = [['Business', 'Phone', 'Bank', 'Bank Name', 'Contact', 'Mobile']];
+    partiesInfo.forEach(p => partyRows.push([p.businessName, p.phoneNumber, p.bankNumber, p.bankName, p.contactName, p.contactMobile]));
+    const bankRows = [['Date', 'Party', 'Method', 'Check No.', 'Debit', 'Credit', 'Balance']];
+    getBankLedger().forEach(entry => {
+      const entryDate = new Date(entry.date);
+      if (entryDate >= from && entryDate <= to) {
+        bankRows.push([entry.date, entry.party, entry.method, entry.checkNumber || '-', entry.debit || '', entry.credit || '', entry.balance || '']);
+      }
+    });
+    downloadCSV('transactions_filtered.csv', allTxRows);
+    downloadCSV('parties.csv', partyRows);
+    downloadCSV('bank_ledger_filtered.csv', bankRows);
+  };
 
-  const txRows = allTransactions.filter(tx => {
-    const txDate = new Date(tx.date);
-    return txDate >= from && txDate <= to;
-  }).map(tx => [
-    tx.date,
-    tx.party,
-    tx.type,
-    asNumber(tx.amount),
-    tx.method || '',
-    tx.billNumber || '',
-    tx.checkNumber || ''
-  ]);
-
-  autoTable(doc, {
-  startY: 20,
-  head: [["Date", "Party", "Type", "Amount", "Method", "Bill No", "Check No"]],
-  body: txRows,
-  theme: 'striped',
-  headStyles: { fillColor: [41, 128, 185] }
-});
-
-
-  doc.save("velhal_summary.pdf");
-};
-// State for export date range
-const [exportStartDate, setExportStartDate] = useState('');
-const [exportEndDate, setExportEndDate] = useState('');
-
-// In the HomePage component:
-// Add this function
-const exportAllData = () => {
-  const from = new Date(exportStartDate);
-  const to = new Date(exportEndDate);
-  to.setHours(23, 59, 59, 999);
-
-  const allTxRows = [
-    ['Date', 'Party', 'Type', 'Amount', 'GST', 'Method', 'Bill No', 'Check No', 'Comment']
-  ];
-  allTransactions.forEach(tx => {
-    const txDate = new Date(tx.date);
-    if (txDate >= from && txDate <= to) {
-      allTxRows.push([
-        tx.date,
-        tx.party,
-        tx.type,
-        asNumber(tx.amount),
-        tx.gstAmount || '',
-        tx.method || '',
-        tx.billNumber || '',
-        tx.checkNumber || '',
-        tx.comment || ''
-      ]);
-    }
-  });
-
-  const partyRows = [
-    ['Business', 'Phone', 'Bank', 'Bank Name', 'Contact', 'Mobile']
-  ];
-  partiesInfo.forEach(p => {
-    partyRows.push([
-      p.businessName,
-      p.phoneNumber,
-      p.bankNumber,
-      p.bankName,
-      p.contactName,
-      p.contactMobile
-    ]);
-  });
-
-  const bankRows = [
-    ['Date', 'Party', 'Method', 'Check No.', 'Debit', 'Credit', 'Balance']
-  ];
-  getBankLedger().forEach(entry => {
-    const entryDate = new Date(entry.date);
-    if (entryDate >= from && entryDate <= to) {
-      bankRows.push([
-        entry.date,
-        entry.party,
-        entry.method,
-        entry.checkNumber || '-',
-        entry.debit || '',
-        entry.credit || '',
-        entry.balance || ''
-      ]);
-    }
-  });
-
-  downloadCSV('transactions_filtered.csv', allTxRows);
-  downloadCSV('parties.csv', partyRows);
-  downloadCSV('bank_ledger_filtered.csv', bankRows);
-};
-
-  
   return (
     <div className="home-page">
       <div className="sidebar">
@@ -594,17 +605,16 @@ const exportAllData = () => {
           </button>
         ))}
       </div>
+
       <div className="content">
-        {/* Edit modal */}
+        {/* Edit Modal */}
         {editingTransaction && (
           <div className="modal">
             <h3>Edit Transaction</h3>
             <label>Date: <input type="date" value={editForm.date || ''} onChange={e => setEditForm(f => ({ ...f, date: e.target.value }))} /></label>
             <label>Party:
-              <select value={editForm.party || ''}
-                onChange={e => setEditForm(f => ({ ...f, party: e.target.value }))}
-              >{partiesInfo.map((p, idx) =>
-                  <option key={idx} value={p.businessName}>{p.businessName}</option>)}
+              <select value={editForm.party || ''} onChange={e => setEditForm(f => ({ ...f, party: e.target.value }))}>
+                {partiesInfo.map((p, idx) => <option key={idx} value={p.businessName}>{p.businessName}</option>)}
               </select>
             </label>
             <label>Type: {editingTransaction.type}</label>
@@ -612,12 +622,10 @@ const exportAllData = () => {
             <label>Bill No: <input type="text" value={editForm.billNumber || ''} onChange={e => setEditForm(f => ({ ...f, billNumber: e.target.value }))} /></label>
             <label>Method: <input type="text" value={editForm.method || ''} onChange={e => setEditForm(f => ({ ...f, method: e.target.value }))} /></label>
             {editForm.method === "Check" &&
-              (<label>Check #: <input type="text" value={editForm.checkNumber || ''} onChange={e => setEditForm(f => ({ ...f, checkNumber: e.target.value }))} /></label>)
+              <label>Check #: <input type="text" value={editForm.checkNumber || ''} onChange={e => setEditForm(f => ({ ...f, checkNumber: e.target.value }))} /></label>
             }
             {editingTransaction.type === "return" && (
-              <label>
-                Comment: <textarea value={editForm.comment || ""} onChange={e => setEditForm(f => ({ ...f, comment: e.target.value }))} />
-              </label>
+              <label>Comment: <textarea value={editForm.comment || ""} onChange={e => setEditForm(f => ({ ...f, comment: e.target.value }))} /></label>
             )}
             <div style={{ marginTop: "8px" }}>
               <button onClick={handleEditSave}>Save</button>
@@ -625,32 +633,36 @@ const exportAllData = () => {
             </div>
           </div>
         )}
-        {/* See Comment Modal */}
+
+        {/* Comment Modal */}
         {commentTxModal && <CommentModal tx={commentTxModal} onClose={() => setCommentTxModal(null)} />}
 
+        {/* HOME VIEW */}
         {view === 'home' && (
           <>
             <h1>SANJIVANI SADI</h1>
             <h3>Total Owed to All Parties: ₹{(totalOwed || 0).toFixed(2)}</h3>
             <h4>
               All Transactions <br />
-              <span style={{fontWeight: 'normal'}}>
+              <span style={{ fontWeight: 'normal' }}>
                 Total GST on Purchases: ₹
-                {
-                  allTransactions.filter(tx => tx.type === 'purchase')
-                    .reduce((sum, tx) => sum + (Number(tx.gstAmount) || 0), 0)
-                    .toFixed(2)
-                }
+                {allTransactions.filter(tx => tx.type === 'purchase').reduce((sum, tx) => sum + (Number(tx.gstAmount) || 0), 0).toFixed(2)}
               </span>
             </h4>
             <label>From: <input type="date" value={exportStartDate} onChange={e => setExportStartDate(e.target.value)} /></label>
             <label style={{ marginLeft: '12px' }}>To: <input type="date" value={exportEndDate} onChange={e => setExportEndDate(e.target.value)} /></label>
             <button onClick={exportAllData} style={{ marginLeft: '12px' }}>Export All (CSV)</button>
             <button onClick={exportPDF} style={{ marginLeft: '6px' }}>Export All (PDF)</button>
-            <TransactionTable transactions={allTransactions} onEdit={handleEditClick} onSeeComment={setCommentTxModal}/>
+            <TransactionTable
+              transactions={allTransactions}
+              onEdit={handleEditClick}
+              onSeeComment={setCommentTxModal}
+              onDelete={handleDeleteTransaction}
+            />
           </>
         )}
 
+        {/* PURCHASE VIEW */}
         {view === 'purchase' && (
           <div className='form-container'>
             <h2>Purchase Entry</h2>
@@ -669,20 +681,17 @@ const exportAllData = () => {
                 <p>Total after GST: ₹{Math.round(asNumber(form.amount) * 1.05)}</p>
               </div>
             )}
-            {selectedParty && (
-              <SectionHistory type="purchase" party={selectedParty} />
-            )}
+            {selectedParty && <SectionHistory type="purchase" party={selectedParty} />}
           </div>
         )}
 
+        {/* PAY VIEW */}
         {view === 'pay' && (
           <div className='form-container'>
             <h2>Payment</h2>
             <select value={selectedParty} onChange={e => setSelectedParty(e.target.value)}>
               <option value="">Select Party</option>
-              {partiesInfo.map((p, i) => (
-                <option key={i} value={p.businessName}>{p.businessName}</option>
-              ))}
+              {partiesInfo.map((p, i) => <option key={i} value={p.businessName}>{p.businessName}</option>)}
             </select>
             <input type="date" value={form.date} onChange={e => setForm({ ...form, date: e.target.value })} />
             <input type="number" placeholder="Amount" value={form.payment} onChange={e => setForm({ ...form, payment: e.target.value })} />
@@ -702,12 +711,11 @@ const exportAllData = () => {
             )}
             <button className='addPurchase-button' onClick={handleAddPayment}>Add Payment</button>
             <button className='clearForm-button' onClick={clearFormFields} style={{ marginLeft: 12 }}>Clear</button>
-            {selectedParty && (
-              <SectionHistory type="payment" party={selectedParty} />
-            )}
+            {selectedParty && <SectionHistory type="payment" party={selectedParty} />}
           </div>
         )}
 
+        {/* RETURN VIEW */}
         {view === 'return' && (
           <div className='form-container'>
             <h2>Return</h2>
@@ -718,15 +726,14 @@ const exportAllData = () => {
             <input type="number" placeholder="Return Amount" value={form.returnAmount} onChange={e => setForm({ ...form, returnAmount: e.target.value })} />
             <input type="text" placeholder="Bill No" value={form.billNumber} onChange={e => setForm({ ...form, billNumber: e.target.value })} />
             <input type="date" value={form.returnDate} onChange={e => setForm({ ...form, returnDate: e.target.value })} />
-            <textarea placeholder="Why was the product returned?" value={form.comment} onChange={e => setForm({ ...form, comment: e.target.value })} style={{width:'100%',minHeight:36,marginTop:8}} />
+            <textarea placeholder="Why was the product returned?" value={form.comment} onChange={e => setForm({ ...form, comment: e.target.value })} style={{ width: '100%', minHeight: 36, marginTop: 8 }} />
             <button className='addPurchase-button' onClick={handleAddReturn}>Add Return</button>
             <button className='clearForm-button' onClick={clearFormFields} style={{ marginLeft: 12 }}>Clear</button>
-            {selectedParty && (
-              <SectionHistory type="return" party={selectedParty} />
-            )}
+            {selectedParty && <SectionHistory type="return" party={selectedParty} />}
           </div>
         )}
 
+        {/* BALANCE VIEW */}
         {view === 'balance' && (
           <div className='form-container'>
             <h2>Balance for: {selectedParty || 'None selected'}</h2>
@@ -737,20 +744,22 @@ const exportAllData = () => {
             <p>Total Owed: ₹{(totalOwed || 0).toFixed(2)}</p>
             <p>
               Total GST on Purchases: ₹
-              {
-                filteredTransactions.filter(tx => tx.type === 'purchase')
-                  .reduce((sum, tx) => sum + (Number(tx.gstAmount) || 0), 0)
-                  .toFixed(2)
-              }
+              {filteredTransactions.filter(tx => tx.type === 'purchase').reduce((sum, tx) => sum + (Number(tx.gstAmount) || 0), 0).toFixed(2)}
             </p>
-            <TransactionTable transactions={filteredTransactions} onEdit={handleEditClick} onSeeComment={setCommentTxModal} />
+            <TransactionTable
+              transactions={filteredTransactions}
+              onEdit={handleEditClick}
+              onSeeComment={setCommentTxModal}
+              onDelete={handleDeleteTransaction}
+            />
           </div>
         )}
 
+        {/* PARTY VIEW */}
         {view === 'party' && (
           <div className='form-container'>
             <h2>All Parties</h2>
-            <PartyInfoTable parties={partiesInfo} />
+            <PartyInfoTable parties={partiesInfo} onDeleteParty={handleDeleteParty} />
             <button
               className="addPurchase-button"
               onClick={() => setShowPartyForm(s => !s)}
@@ -771,11 +780,12 @@ const exportAllData = () => {
           </div>
         )}
 
+        {/* BANK VIEW */}
         {view === 'bank' && (
           <div className="form-container">
             <h2>Bank Balance: ₹{(bankBalance || 0).toFixed(2)}</h2>
             <input type="number" value={depositAmount} onChange={e => setDepositAmount(e.target.value)} placeholder="Enter deposit amount" />
-            <input type="date" value={depositDate} onChange={e => setDepositDate(e.target.value)} placeholder="Enter deposit date" />
+            <input type="date" value={depositDate} onChange={e => setDepositDate(e.target.value)} />
             <button onClick={handleDeposit} className="addPurchase-button">Deposit</button>
             <h2 style={{ marginTop: '20px' }}>Bank Transaction History</h2>
             <table className="transaction-table">
@@ -788,6 +798,7 @@ const exportAllData = () => {
                   <th>Debit</th>
                   <th>Credit</th>
                   <th>Balance</th>
+                  <th>Delete</th>
                 </tr>
               </thead>
               <tbody>
@@ -804,6 +815,16 @@ const exportAllData = () => {
                       {entry.credit ? `₹${entry.credit.toFixed(2)}` : '-'}
                     </td>
                     <td>₹{entry.balance.toFixed(2)}</td>
+                    <td>
+                      {entry.type === 'deposit' && entry.source === 'bankDeposits' && entry.isPaymentDeduction !== true
+                        ? <button
+                            onClick={() => handleDeleteBankEntry(entry)}
+                            style={{ padding: '4px 6px', fontSize: '11px', color: 'white', background: '#dc3545', border: 'none', borderRadius: '3px' }}
+                          >
+                            Del
+                          </button>
+                        : ''}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -811,6 +832,7 @@ const exportAllData = () => {
           </div>
         )}
 
+        {/* SALARY VIEW */}
         {view === 'salary' && (
           <div className='form-container'>
             <h2>Salary Payment</h2>
@@ -823,3 +845,4 @@ const exportAllData = () => {
 };
 
 export default HomePage;
+   
