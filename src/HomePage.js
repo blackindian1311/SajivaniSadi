@@ -9,7 +9,6 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import 'jspdf-autotable';
 
-// Helper for numbers
 const asNumber = v => Number(typeof v === "string" ? v.replace(/,/g, "") : v) || 0;
 
 const PartyInfoTable = ({ parties = [], onDeleteParty }) => {
@@ -145,9 +144,19 @@ const HomePage = () => {
   });
   const [showPartyForm, setShowPartyForm] = useState(false);
 
-  // State for export date range
+  // Home export date range
   const [exportStartDate, setExportStartDate] = useState('');
   const [exportEndDate, setExportEndDate] = useState('');
+
+  // ── Per-page date filter states ──
+  const [purchaseStart, setPurchaseStart] = useState('');
+  const [purchaseEnd, setPurchaseEnd] = useState('');
+  const [paymentStart, setPaymentStart] = useState('');
+  const [paymentEnd, setPaymentEnd] = useState('');
+  const [returnStart, setReturnStart] = useState('');
+  const [returnEnd, setReturnEnd] = useState('');
+  const [balanceStart, setBalanceStart] = useState('');
+  const [balanceEnd, setBalanceEnd] = useState('');
 
   // Real-time listeners
   useEffect(() => {
@@ -163,7 +172,6 @@ const HomePage = () => {
     const unsubRet = onSnapshot(collection(db, "returns"), snap => {
       setReturnTransactions(snap.docs.map(doc => ({ id: doc.id, type: 'return', ...doc.data() })));
     });
-    // Store id for bank deposits so we can delete them
     const unsubDeposits = onSnapshot(collection(db, "bankDeposits"), snap => {
       setBankDeposits(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     });
@@ -198,6 +206,18 @@ const HomePage = () => {
     if (tx.type === 'payment' || tx.type === 'return') return total - asNumber(tx.amount);
     return total;
   }, 0);
+
+  // ── Date filter helper ──
+  const filterByDate = (txList, start, end) => {
+    if (!start || !end) return txList;
+    const from = new Date(start);
+    const to = new Date(end);
+    to.setHours(23, 59, 59, 999);
+    return txList.filter(tx => {
+      const d = new Date(tx.date);
+      return d >= from && d <= to;
+    });
+  };
 
   const getBankLedger = () => {
     let ledger = [];
@@ -260,7 +280,6 @@ const HomePage = () => {
     comment: ''
   });
 
-  // ── DELETE PARTY ──
   const handleDeleteParty = async (party) => {
     if (!window.confirm(`Delete party "${party.businessName}"? This will NOT delete their transactions.`)) return;
     try {
@@ -272,7 +291,6 @@ const HomePage = () => {
     }
   };
 
-  // ── DELETE TRANSACTION ──
   const handleDeleteTransaction = async (tx) => {
     const msg =
       tx.type === 'purchase' ? `Delete purchase ₹${asNumber(tx.amount).toFixed(2)} for ${tx.party}?` :
@@ -282,7 +300,6 @@ const HomePage = () => {
     try {
       const coll = tx.type === 'purchase' ? 'purchases' : tx.type === 'payment' ? 'payments' : 'returns';
 
-      // If deleting a non-cash payment, reverse the bank balance and remove linked bankDeposit entry
       if (tx.type === 'payment' && tx.method && tx.method !== 'Cash') {
         const amount = asNumber(tx.amount);
         await setDoc(doc(db, 'meta', 'bank'), { balance: asNumber(bankBalance) + amount });
@@ -307,7 +324,6 @@ const HomePage = () => {
     }
   };
 
-  // ── DELETE BANK ENTRY ──
   const handleDeleteBankEntry = async (entry) => {
     if (entry.type !== 'deposit' || entry.source !== 'bankDeposits' || entry.isPaymentDeduction === true) {
       alert('Only manual deposit entries can be deleted here.');
@@ -428,7 +444,97 @@ const HomePage = () => {
 
   const handleEditCancel = () => { setEditingTransaction(null); setEditForm({}); };
 
-  // TransactionTable now has a Delete column
+  // ── SHARED PDF HELPER ──
+  const exportSimplePDF = (title, filename, rows) => {
+    const d = new jsPDF();
+    d.setFontSize(16);
+    d.text(title, 14, 18);
+    d.setFontSize(10);
+    d.text(`Generated: ${new Date().toLocaleDateString('en-IN')}`, 14, 26);
+    autoTable(d, {
+      startY: 32,
+      head: [['Party Name', 'Date', 'Amount']],
+      body: rows,
+      theme: 'striped',
+      headStyles: { fillColor: [41, 128, 185], textColor: 255, fontStyle: 'bold' },
+      alternateRowStyles: { fillColor: [245, 249, 255] },
+      styles: { fontSize: 11, cellPadding: 5 },
+      columnStyles: {
+        0: { cellWidth: 80 },
+        1: { cellWidth: 50 },
+        2: { cellWidth: 50, halign: 'right' }
+      }
+    });
+    // Total row
+    const total = rows.reduce((sum, r) => sum + asNumber(String(r[2]).replace('₹', '')), 0);
+    const finalY = d.lastAutoTable.finalY + 6;
+    d.setFontSize(12);
+    d.setFont(undefined, 'bold');
+    d.text(`Total: ₹${total.toFixed(2)}`, 148, finalY, { align: 'right' });
+    d.save(filename);
+  };
+
+  // ── PAGE-SPECIFIC PDF EXPORTS ──
+  const exportPurchasePDF = () => {
+    const txList = filterByDate(
+      purchaseTransactions.filter(tx => !selectedParty || tx.party === selectedParty),
+      purchaseStart, purchaseEnd
+    ).sort((a, b) => new Date(b.date) - new Date(a.date));
+    const rows = txList.map(tx => [tx.party, tx.date, `₹${asNumber(tx.amount).toFixed(2)}`]);
+    exportSimplePDF('Purchase History', 'purchase_history.pdf', rows);
+  };
+
+  const exportPaymentPDF = () => {
+    const txList = filterByDate(
+      paymentTransactions.filter(tx => !selectedParty || tx.party === selectedParty),
+      paymentStart, paymentEnd
+    ).sort((a, b) => new Date(b.date) - new Date(a.date));
+    const rows = txList.map(tx => [tx.party, tx.date, `₹${asNumber(tx.amount).toFixed(2)}`]);
+    exportSimplePDF('Payment History', 'payment_history.pdf', rows);
+  };
+
+  const exportReturnPDF = () => {
+    const txList = filterByDate(
+      returnTransactions.filter(tx => !selectedParty || tx.party === selectedParty),
+      returnStart, returnEnd
+    ).sort((a, b) => new Date(b.date) - new Date(a.date));
+    const rows = txList.map(tx => [tx.party, tx.date, `₹${asNumber(tx.amount).toFixed(2)}`]);
+    exportSimplePDF('Return History', 'return_history.pdf', rows);
+  };
+
+  const exportBalancePDF = () => {
+    const txList = filterByDate(
+      filteredTransactions,
+      balanceStart, balanceEnd
+    ).sort((a, b) => new Date(b.date) - new Date(a.date));
+    const rows = txList.map(tx => [tx.party, tx.date, `₹${asNumber(tx.amount).toFixed(2)}`]);
+    exportSimplePDF(
+      selectedParty ? `Balance - ${selectedParty}` : 'Balance History',
+      'balance_history.pdf',
+      rows
+    );
+  };
+
+  const exportPartyPDF = () => {
+    const d = new jsPDF();
+    d.setFontSize(16);
+    d.text('All Parties', 14, 18);
+    d.setFontSize(10);
+    d.text(`Generated: ${new Date().toLocaleDateString('en-IN')}`, 14, 26);
+    autoTable(d, {
+      startY: 32,
+      head: [['Business Name', 'Phone', 'Bank Name', 'Contact', 'Mobile']],
+      body: partiesInfo.map(p => [
+        p.businessName, p.phoneNumber, p.bankName, p.contactName, p.contactMobile
+      ]),
+      theme: 'striped',
+      headStyles: { fillColor: [41, 128, 185], textColor: 255, fontStyle: 'bold' },
+      alternateRowStyles: { fillColor: [245, 249, 255] },
+      styles: { fontSize: 10, cellPadding: 4 }
+    });
+    d.save('parties_list.pdf');
+  };
+
   const TransactionTable = ({ transactions, onEdit, onSeeComment, onDelete }) => {
     const txs = transactions.slice().sort((a, b) => new Date(b.date) - new Date(a.date));
     const runningBalances = {};
@@ -595,6 +701,9 @@ const HomePage = () => {
     downloadCSV('bank_ledger_filtered.csv', bankRows);
   };
 
+  // Reusable date filter + export PDF bar style
+  const filterBarStyle = { marginBottom: 14, display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 8 };
+
   return (
     <div className="home-page">
       <div className="sidebar">
@@ -649,10 +758,12 @@ const HomePage = () => {
                 {allTransactions.filter(tx => tx.type === 'purchase').reduce((sum, tx) => sum + (Number(tx.gstAmount) || 0), 0).toFixed(2)}
               </span>
             </h4>
-            <label>From: <input type="date" value={exportStartDate} onChange={e => setExportStartDate(e.target.value)} /></label>
-            <label style={{ marginLeft: '12px' }}>To: <input type="date" value={exportEndDate} onChange={e => setExportEndDate(e.target.value)} /></label>
-            <button onClick={exportAllData} style={{ marginLeft: '12px' }}>Export All (CSV)</button>
-            <button onClick={exportPDF} style={{ marginLeft: '6px' }}>Export All (PDF)</button>
+            <div style={filterBarStyle}>
+              <label>From: <input type="date" value={exportStartDate} onChange={e => setExportStartDate(e.target.value)} /></label>
+              <label style={{ marginLeft: '12px' }}>To: <input type="date" value={exportEndDate} onChange={e => setExportEndDate(e.target.value)} /></label>
+              <button onClick={exportAllData} style={{ marginLeft: '12px' }}>Export All (CSV)</button>
+              <button onClick={exportPDF} style={{ marginLeft: '6px' }}>Export All (PDF)</button>
+            </div>
             <TransactionTable
               transactions={allTransactions}
               onEdit={handleEditClick}
@@ -681,6 +792,19 @@ const HomePage = () => {
                 <p>Total after GST: ₹{Math.round(asNumber(form.amount) * 1.05)}</p>
               </div>
             )}
+
+            {/* ── Purchase PDF Export Bar ── */}
+            <div style={{ ...filterBarStyle, marginTop: 20, paddingTop: 14, borderTop: '1px solid #e0e0e0' }}>
+              <label>From: <input type="date" value={purchaseStart} onChange={e => setPurchaseStart(e.target.value)} /></label>
+              <label>To: <input type="date" value={purchaseEnd} onChange={e => setPurchaseEnd(e.target.value)} /></label>
+              <button
+                onClick={exportPurchasePDF}
+                style={{ padding: '6px 16px', background: '#c0392b', color: 'white', border: 'none', borderRadius: '4px', fontWeight: 'bold', cursor: 'pointer' }}
+              >
+                Export PDF
+              </button>
+            </div>
+
             {selectedParty && <SectionHistory type="purchase" party={selectedParty} />}
           </div>
         )}
@@ -711,6 +835,19 @@ const HomePage = () => {
             )}
             <button className='addPurchase-button' onClick={handleAddPayment}>Add Payment</button>
             <button className='clearForm-button' onClick={clearFormFields} style={{ marginLeft: 12 }}>Clear</button>
+
+            {/* ── Payment PDF Export Bar ── */}
+            <div style={{ ...filterBarStyle, marginTop: 20, paddingTop: 14, borderTop: '1px solid #e0e0e0' }}>
+              <label>From: <input type="date" value={paymentStart} onChange={e => setPaymentStart(e.target.value)} /></label>
+              <label>To: <input type="date" value={paymentEnd} onChange={e => setPaymentEnd(e.target.value)} /></label>
+              <button
+                onClick={exportPaymentPDF}
+                style={{ padding: '6px 16px', background: '#c0392b', color: 'white', border: 'none', borderRadius: '4px', fontWeight: 'bold', cursor: 'pointer' }}
+              >
+                Export PDF
+              </button>
+            </div>
+
             {selectedParty && <SectionHistory type="payment" party={selectedParty} />}
           </div>
         )}
@@ -729,6 +866,19 @@ const HomePage = () => {
             <textarea placeholder="Why was the product returned?" value={form.comment} onChange={e => setForm({ ...form, comment: e.target.value })} style={{ width: '100%', minHeight: 36, marginTop: 8 }} />
             <button className='addPurchase-button' onClick={handleAddReturn}>Add Return</button>
             <button className='clearForm-button' onClick={clearFormFields} style={{ marginLeft: 12 }}>Clear</button>
+
+            {/* ── Return PDF Export Bar ── */}
+            <div style={{ ...filterBarStyle, marginTop: 20, paddingTop: 14, borderTop: '1px solid #e0e0e0' }}>
+              <label>From: <input type="date" value={returnStart} onChange={e => setReturnStart(e.target.value)} /></label>
+              <label>To: <input type="date" value={returnEnd} onChange={e => setReturnEnd(e.target.value)} /></label>
+              <button
+                onClick={exportReturnPDF}
+                style={{ padding: '6px 16px', background: '#c0392b', color: 'white', border: 'none', borderRadius: '4px', fontWeight: 'bold', cursor: 'pointer' }}
+              >
+                Export PDF
+              </button>
+            </div>
+
             {selectedParty && <SectionHistory type="return" party={selectedParty} />}
           </div>
         )}
@@ -746,8 +896,21 @@ const HomePage = () => {
               Total GST on Purchases: ₹
               {filteredTransactions.filter(tx => tx.type === 'purchase').reduce((sum, tx) => sum + (Number(tx.gstAmount) || 0), 0).toFixed(2)}
             </p>
+
+            {/* ── Balance PDF Export Bar ── */}
+            <div style={{ ...filterBarStyle, marginBottom: 16 }}>
+              <label>From: <input type="date" value={balanceStart} onChange={e => setBalanceStart(e.target.value)} /></label>
+              <label>To: <input type="date" value={balanceEnd} onChange={e => setBalanceEnd(e.target.value)} /></label>
+              <button
+                onClick={exportBalancePDF}
+                style={{ padding: '6px 16px', background: '#c0392b', color: 'white', border: 'none', borderRadius: '4px', fontWeight: 'bold', cursor: 'pointer' }}
+              >
+                Export PDF
+              </button>
+            </div>
+
             <TransactionTable
-              transactions={filteredTransactions}
+              transactions={filterByDate(filteredTransactions, balanceStart, balanceEnd)}
               onEdit={handleEditClick}
               onSeeComment={setCommentTxModal}
               onDelete={handleDeleteTransaction}
@@ -759,6 +922,17 @@ const HomePage = () => {
         {view === 'party' && (
           <div className='form-container'>
             <h2>All Parties</h2>
+
+            {/* ── Party PDF Export Button ── */}
+            <div style={{ marginBottom: 14 }}>
+              <button
+                onClick={exportPartyPDF}
+                style={{ padding: '6px 16px', background: '#c0392b', color: 'white', border: 'none', borderRadius: '4px', fontWeight: 'bold', cursor: 'pointer' }}
+              >
+                Export PDF
+              </button>
+            </div>
+
             <PartyInfoTable parties={partiesInfo} onDeleteParty={handleDeleteParty} />
             <button
               className="addPurchase-button"
@@ -836,7 +1010,6 @@ const HomePage = () => {
         {view === 'salary' && (
           <div className='form-container'>
             <h2>Salary Payment</h2>
-            {/* Add your salary implementation here */}
           </div>
         )}
       </div>
@@ -845,4 +1018,3 @@ const HomePage = () => {
 };
 
 export default HomePage;
-   
