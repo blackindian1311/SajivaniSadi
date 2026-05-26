@@ -159,11 +159,9 @@ const HomePage = () => {
   });
   const [showPartyForm, setShowPartyForm] = useState(false);
 
-  // Home export date range
   const [exportStartDate, setExportStartDate] = useState('');
   const [exportEndDate, setExportEndDate] = useState('');
 
-  // Per-page date filter states
   const [purchaseStart, setPurchaseStart] = useState('');
   const [purchaseEnd, setPurchaseEnd] = useState('');
   const [paymentStart, setPaymentStart] = useState('');
@@ -209,7 +207,6 @@ const HomePage = () => {
     return total;
   }, 0);
 
-  // ── Date filter helper ──
   const filterByDate = (list, start, end) => {
     if (!start || !end) return list;
     const from = new Date(start);
@@ -369,7 +366,6 @@ const HomePage = () => {
 
   const handleEditCancel = () => { setEditingTransaction(null); setEditForm({}); };
 
-  // ── SHARED PDF HELPER (Party Name, Date, Amount) ──
   const exportSimplePDF = (title, filename, rows) => {
     const d = new jsPDF();
     d.setFontSize(16);
@@ -400,7 +396,6 @@ const HomePage = () => {
     d.save(filename);
   };
 
-  // ── PAGE-SPECIFIC PDF EXPORTS ──
   const exportPurchasePDF = () => {
     const list = filterByDate(
       purchaseTransactions.filter(tx => !selectedParty || tx.party === selectedParty),
@@ -602,7 +597,6 @@ const HomePage = () => {
       </div>
 
       <div className="content">
-        {/* Edit Modal */}
         {editingTransaction && (
           <div className="modal">
             <h3>Edit Transaction</h3>
@@ -629,10 +623,8 @@ const HomePage = () => {
           </div>
         )}
 
-        {/* Comment Modal */}
         {commentTxModal && <CommentModal tx={commentTxModal} onClose={() => setCommentTxModal(null)} />}
 
-        {/* ── HOME VIEW ── */}
         {view === 'home' && (
           <>
             <h1>SANJIVANI SADI</h1>
@@ -653,7 +645,6 @@ const HomePage = () => {
           </>
         )}
 
-        {/* ── PURCHASE VIEW ── */}
         {view === 'purchase' && (
           <div className='form-container'>
             <h2>Purchase Entry</h2>
@@ -673,7 +664,6 @@ const HomePage = () => {
               </div>
             )}
 
-            {/* ── PURCHASE EXPORT PDF BAR ── */}
             <div style={filterBarStyle}>
               <strong style={{ marginRight: 4 }}>Export Purchase PDF:</strong>
               <label>From: <input type="date" value={purchaseStart} onChange={e => setPurchaseStart(e.target.value)} /></label>
@@ -685,7 +675,6 @@ const HomePage = () => {
           </div>
         )}
 
-        {/* ── PAY VIEW ── */}
         {view === 'pay' && (
           <div className='form-container'>
             <h2>Payment</h2>
@@ -707,7 +696,6 @@ const HomePage = () => {
             <button className='addPurchase-button' onClick={handleAddPayment}>Add Payment</button>
             <button className='clearForm-button' onClick={clearFormFields} style={{ marginLeft: 12 }}>Clear</button>
 
-            {/* ── PAYMENT EXPORT PDF BAR ── */}
             <div style={filterBarStyle}>
               <strong style={{ marginRight: 4 }}>Export Payment PDF:</strong>
               <label>From: <input type="date" value={paymentStart} onChange={e => setPaymentStart(e.target.value)} /></label>
@@ -719,7 +707,6 @@ const HomePage = () => {
           </div>
         )}
 
-        {/* ── RETURN VIEW ── */}
         {view === 'return' && (
           <div className='form-container'>
             <h2>Return</h2>
@@ -734,7 +721,6 @@ const HomePage = () => {
             <button className='addPurchase-button' onClick={handleAddReturn}>Add Return</button>
             <button className='clearForm-button' onClick={clearFormFields} style={{ marginLeft: 12 }}>Clear</button>
 
-            {/* ── RETURN EXPORT PDF BAR ── */}
             <div style={filterBarStyle}>
               <strong style={{ marginRight: 4 }}>Export Return PDF:</strong>
               <label>From: <input type="date" value={returnStart} onChange={e => setReturnStart(e.target.value)} /></label>
@@ -746,7 +732,6 @@ const HomePage = () => {
           </div>
         )}
 
-        {/* ── BALANCE VIEW ── */}
         {view === 'balance' && (
           <div className='form-container'>
             <h2>Balance for: {selectedParty || 'None selected'}</h2>
@@ -759,7 +744,6 @@ const HomePage = () => {
               Total GST on Purchases: ₹{filteredTransactions.filter(tx => tx.type === 'purchase').reduce((sum, tx) => sum + (Number(tx.gstAmount) || 0), 0).toFixed(2)}
             </p>
 
-            {/* ── BALANCE EXPORT PDF BAR ── */}
             <div style={filterBarStyle}>
               <strong style={{ marginRight: 4 }}>Export Balance PDF:</strong>
               <label>From: <input type="date" value={balanceStart} onChange={e => setBalanceStart(e.target.value)} /></label>
@@ -776,12 +760,10 @@ const HomePage = () => {
           </div>
         )}
 
-        {/* ── PARTY VIEW ── */}
         {view === 'party' && (
           <div className='form-container'>
             <h2>All Parties</h2>
 
-            {/* ── PARTY EXPORT PDF BUTTON ── */}
             <div style={{ marginBottom: 14 }}>
               <button style={pdfBtnStyle} onClick={exportPartyPDF}>📄 Export Parties PDF</button>
             </div>
@@ -804,7 +786,6 @@ const HomePage = () => {
           </div>
         )}
 
-        {/* ── BANK VIEW ── */}
         {view === 'bank' && (
           <div className="form-container">
             <h2>Bank Balance: ₹{(bankBalance || 0).toFixed(2)}</h2>
@@ -841,7 +822,6 @@ const HomePage = () => {
           </div>
         )}
 
-        {/* ── SALARY VIEW ── */}
         {view === 'salary' && (
           <div className='form-container'>
             <h2>Salary Payment</h2>
@@ -852,4 +832,4 @@ const HomePage = () => {
   );
 };
 
-export default HomePage;  
+export default HomePage;
