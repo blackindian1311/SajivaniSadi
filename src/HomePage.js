@@ -64,7 +64,7 @@ const PartyInfoTable = ({ parties = [], onDeleteParty }) => {
                 <td>
                   <button
                     onClick={() => onDeleteParty && onDeleteParty(p)}
-                    style={{ padding: '4px 6px', fontSize: '11px', color: 'white', background: '#dc3545', border: 'none', borderRadius: '3px' }}
+                    style={{ padding: '4px 8px', fontSize: '11px', color: 'white', background: '#dc3545', border: 'none', borderRadius: '3px', cursor: 'pointer' }}
                   >
                     Del
                   </button>
@@ -465,10 +465,12 @@ const HomePage = () => {
     const txs = transactions.slice().sort((a, b) => new Date(b.date) - new Date(a.date));
     const runningBalances = {};
     const sortedByParty = {};
+    
     transactions.forEach(tx => {
       if (!sortedByParty[tx.party]) sortedByParty[tx.party] = [];
       sortedByParty[tx.party].push(tx);
     });
+    
     Object.keys(sortedByParty).forEach(party => {
       sortedByParty[party].sort((a, b) => new Date(a.date) - new Date(b.date));
       let bal = 0;
@@ -478,45 +480,98 @@ const HomePage = () => {
         runningBalances[tx.id] = bal;
       });
     });
+    
     return (
-      <div className="transaction-table-wrapper">
-        <table className="transaction-table">
+      <div className="transaction-table-wrapper" style={{ overflowX: 'auto' }}>
+        <table className="transaction-table" style={{ minWidth: '1450px', width: '100%' }}>
           <thead>
             <tr>
-              <th>Date</th><th>Party</th><th>Type</th><th>Bill No</th>
-              <th>Method</th><th>Check No</th><th>Amount</th><th>GST</th>
-              <th>Debit</th><th>Credit</th><th>Balance</th>
-              <th>Edit</th><th>Comment</th><th>Delete</th>
+              <th>Date</th>
+              <th>Party</th>
+              <th>Type</th>
+              <th>Bill No</th>
+              <th>Method</th>
+              <th>Check No</th>
+              <th>Amount</th>
+              <th>GST</th>
+              <th>Debit</th>
+              <th>Credit</th>
+              <th>Balance</th>
+              <th>Edit</th>
+              <th>Delete</th>
+              <th>Comment</th>
             </tr>
           </thead>
           <tbody>
-            {txs.map((tx, i) => {
-              const debit = tx.type === 'purchase' ? asNumber(tx.amount) : null;
-              const credit = (tx.type === 'payment' || tx.type === 'return') ? asNumber(tx.amount) : null;
-              const gst = tx.type === 'purchase'
-                ? '₹' + (tx.gstAmount !== undefined ? Number(tx.gstAmount).toFixed(2) : ((asNumber(tx.amount) / 1.05) * 0.05).toFixed(2))
-                : '-';
-              return (
-                <tr key={tx.id || i}>
-                  <td>{tx.date}</td>
-                  <td>{tx.party}</td>
-                  <td>{tx.type}</td>
-                  <td>{tx.billNumber || '-'}</td>
-                  <td>{tx.method || '-'}</td>
-                  <td>{tx.method === 'Check' && tx.checkNumber ? tx.checkNumber : '-'}</td>
-                  <td>₹{asNumber(tx.amount).toFixed(2)}</td>
-                  <td>{gst}</td>
-                  <td>{debit !== null ? `₹${asNumber(debit).toFixed(2)}` : '-'}</td>
-                  <td>{credit !== null ? `₹${asNumber(credit).toFixed(2)}` : '-'}</td>
-                  <td>₹{runningBalances[tx.id] !== undefined ? asNumber(runningBalances[tx.id]).toFixed(2) : '-'}</td>
-                  <td><button onClick={() => onEdit && onEdit(tx)}>Edit</button></td>
-                  <td>{tx.comment ? <button onClick={() => onSeeComment && onSeeComment(tx)}>See Comment</button> : ''}</td>
-                  <td>
-                    <button onClick={() => onDelete && onDelete(tx)} style={{ padding: '4px 6px', fontSize: '11px', color: 'white', background: '#dc3545', border: 'none', borderRadius: '3px' }}>Del</button>
-                  </td>
-                </tr>
-              );
-            })}
+            {txs.length === 0 ? (
+              <tr>
+                <td colSpan={14} style={{ textAlign: 'center', color: '#888' }}>
+                  No transactions found.
+                </td>
+              </tr>
+            ) : (
+              txs.map((tx, i) => {
+                const debit = tx.type === 'purchase' ? asNumber(tx.amount) : null;
+                const credit = (tx.type === 'payment' || tx.type === 'return') ? asNumber(tx.amount) : null;
+                const gst = tx.type === 'purchase'
+                  ? '₹' + (
+                      tx.gstAmount !== undefined
+                        ? Number(tx.gstAmount).toFixed(2)
+                        : ((asNumber(tx.amount) / 1.05) * 0.05).toFixed(2)
+                    )
+                  : '-';
+  
+                return (
+                  <tr key={tx.id || i}>
+                    <td>{tx.date}</td>
+                    <td>{tx.party}</td>
+                    <td>{tx.type}</td>
+                    <td>{tx.billNumber || '-'}</td>
+                    <td>{tx.method || '-'}</td>
+                    <td>{tx.method === 'Check' && tx.checkNumber ? tx.checkNumber : '-'}</td>
+                    <td>₹{asNumber(tx.amount).toFixed(2)}</td>
+                    <td>{gst}</td>
+                    <td>{debit !== null ? `₹${asNumber(debit).toFixed(2)}` : '-'}</td>
+                    <td>{credit !== null ? `₹${asNumber(credit).toFixed(2)}` : '-'}</td>
+                    <td>₹{runningBalances[tx.id] !== undefined ? asNumber(runningBalances[tx.id]).toFixed(2) : '-'}</td>
+  
+                    <td>
+                      <button onClick={() => onEdit && onEdit(tx)}>
+                        Edit
+                      </button>
+                    </td>
+  
+                    <td>
+                      <button
+                        onClick={() => onDelete && onDelete(tx)}
+                        style={{
+                          padding: '4px 8px',
+                          fontSize: '11px',
+                          color: 'white',
+                          background: '#dc3545',
+                          border: 'none',
+                          borderRadius: '3px',
+                          cursor: 'pointer',
+                          whiteSpace: 'nowrap'
+                        }}
+                      >
+                        Delete
+                      </button>
+                    </td>
+  
+                    <td>
+                      {tx.comment ? (
+                        <button onClick={() => onSeeComment && onSeeComment(tx)}>
+                          See Comment
+                        </button>
+                      ) : (
+                        '-'
+                      )}
+                    </td>
+                  </tr>
+                );
+              })
+            )}
           </tbody>
         </table>
       </div>
@@ -812,7 +867,7 @@ const HomePage = () => {
                     <td>₹{entry.balance.toFixed(2)}</td>
                     <td>
                       {entry.type === 'deposit' && entry.source === 'bankDeposits' && entry.isPaymentDeduction !== true
-                        ? <button onClick={() => handleDeleteBankEntry(entry)} style={{ padding: '4px 6px', fontSize: '11px', color: 'white', background: '#dc3545', border: 'none', borderRadius: '3px' }}>Del</button>
+                        ? <button onClick={() => handleDeleteBankEntry(entry)} style={{ padding: '4px 8px', fontSize: '11px', color: 'white', background: '#dc3545', border: 'none', borderRadius: '3px', cursor: 'pointer' }}>Del</button>
                         : ''}
                     </td>
                   </tr>
