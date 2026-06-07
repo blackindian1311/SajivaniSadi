@@ -31,19 +31,46 @@ const S = {
     background: '#f8f9fa', borderRadius: 6, border: '1px solid #ddd'
   },
   delBtn: {
-    padding: '3px 8px', fontSize: 11, color: '#fff',
-    background: '#dc3545', border: 'none', borderRadius: 3,
-    cursor: 'pointer', fontWeight: 'bold', whiteSpace: 'nowrap'
+    padding: '10px 16px', 
+    fontSize: 14, 
+    color: '#fff',
+    background: '#c0392b', 
+    border: '2px solid #922b21',
+    borderRadius: 5,
+    cursor: 'pointer', 
+    fontWeight: 'bold',
+    display: 'inline-block',
+    minWidth: '120px',
+    textAlign: 'center',
+    whiteSpace: 'nowrap'
   },
   editBtn: {
-    padding: '3px 8px', fontSize: 11, color: '#fff',
-    background: '#0069d9', border: 'none', borderRadius: 3,
-    cursor: 'pointer', fontWeight: 'bold', whiteSpace: 'nowrap'
+    padding: '10px 16px', 
+    fontSize: 14, 
+    color: '#fff',
+    background: '#0069d9', 
+    border: '2px solid #004085',
+    borderRadius: 5,
+    cursor: 'pointer', 
+    fontWeight: 'bold',
+    display: 'inline-block',
+    minWidth: '120px',
+    textAlign: 'center',
+    whiteSpace: 'nowrap'
   },
   commentBtn: {
-    padding: '3px 8px', fontSize: 11, color: '#fff',
-    background: '#6c757d', border: 'none', borderRadius: 3,
-    cursor: 'pointer', fontWeight: 'bold', whiteSpace: 'nowrap'
+    padding: '10px 16px', 
+    fontSize: 14, 
+    color: '#fff',
+    background: '#6c757d', 
+    border: '2px solid #545b62',
+    borderRadius: 5,
+    cursor: 'pointer', 
+    fontWeight: 'bold',
+    display: 'inline-block',
+    minWidth: '120px',
+    textAlign: 'center',
+    whiteSpace: 'nowrap'
   }
 };
 
@@ -140,7 +167,7 @@ function PartyTable({ parties, onDelete }) {
   );
 }
 
-// ─��─ TxTable (ALL TRANSACTIONS - Compact) ─────────
+// ─── TxTable (ALL TRANSACTIONS - Compact) ─────────
 function TxTable({ transactions, onEdit, onComment, onDelete }) {
   const sorted = [...transactions].sort((a, b) => new Date(b.date) - new Date(a.date));
 
