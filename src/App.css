@@ -68,7 +68,6 @@ body {
   background-color: #555;
 }
 
-/* ✅ FIXED: content allows overflow horizontally */
 .content {  
   flex-grow: 1;  
   padding: 20px;
@@ -227,7 +226,6 @@ button.large-button:hover {
   width: 100%;
 }
 
-/* ✅ KEY FIX: Tables set to width: 100% so they expand with content */
 .transaction-table, .partyInfoTable {
   width: 100%;
   border-collapse: collapse;
@@ -296,7 +294,6 @@ h2 {
   margin-bottom: 40px;
 }
 
-/* ✅ KEY FIX: form-container set to 100% width, no max-width limit */
 .form-container {
   background-color: #1e2a38;
   padding: 40px;
@@ -497,7 +494,6 @@ body::before {
   z-index: 1;
 }
 
-/* ✅ Modal styling */
 .modal {
   position: fixed;
   top: 0;
@@ -510,20 +506,65 @@ body::before {
   justify-content: center;
   z-index: 2000;
 }
-/* FORCE DELETE BUTTONS TO SHOW */
+
+/* ✅ TABLE AND BUTTON STYLES - DELETE BUTTONS WILL BE VISIBLE */
 table {
   width: 100% !important;
-  min-width: max-content !important;
+  table-layout: auto !important;
 }
 
-td button, th button {
+table th,
+table td {
+  overflow: visible !important;
+  white-space: normal !important;
+}
+
+table button {
+  padding: 10px 16px !important;
+  margin: 3px !important;
+  font-size: 14px !important;
+  min-width: 120px !important;
   display: inline-block !important;
-  padding: 5px 8px !important;
-  margin: 0 2px !important;
-  font-size: 11px !important;
-  min-width: 60px !important;
+  cursor: pointer !important;
+  border: none !important;
+  border-radius: 5px !important;
+  font-weight: bold !important;
+  color: #fff !important;
+  white-space: nowrap !important;
 }
 
-div[style*="overflow"] table {
-  width: auto !important;
+/* Delete Button - Red */
+table button[style*="background: #c0392b"],
+table button[style*="background:#c0392b"] {
+  background-color: #c0392b !important;
+  border: 2px solid #922b21 !important;
+}
+
+table button[style*="background: #c0392b"]:hover,
+table button[style*="background:#c0392b"]:hover {
+  background-color: #a93226 !important;
+}
+
+/* Edit Button - Blue */
+table button[style*="background: #0069d9"],
+table button[style*="background:#0069d9"] {
+  background-color: #0069d9 !important;
+  border: 2px solid #004085 !important;
+}
+
+table button[style*="background: #0069d9"]:hover,
+table button[style*="background:#0069d9"]:hover {
+  background-color: #0056b3 !important;
+}
+
+/* Comment Button - Gray */
+table button[style*="background: #6c757d"],
+table button[style*="background:#6c757d"] {
+  background-color: #6c757d !important;
+  border: 2px solid #545b62 !important;
+}
+
+table button[style*="background: #6c757d"]:hover,
+table button[style*="background:#6c757d"]:hover {
+  background-color: #5a6268 !important;
 }
