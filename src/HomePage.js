@@ -31,19 +31,19 @@ const S = {
     background: '#f8f9fa', borderRadius: 6, border: '1px solid #ddd'
   },
   delBtn: {
-    padding: '4px 10px', fontSize: 12, color: '#fff',
+    padding: '3px 8px', fontSize: 11, color: '#fff',
     background: '#dc3545', border: 'none', borderRadius: 3,
-    cursor: 'pointer', fontWeight: 'bold'
+    cursor: 'pointer', fontWeight: 'bold', whiteSpace: 'nowrap'
   },
   editBtn: {
-    padding: '4px 10px', fontSize: 12, color: '#fff',
+    padding: '3px 8px', fontSize: 11, color: '#fff',
     background: '#0069d9', border: 'none', borderRadius: 3,
-    cursor: 'pointer', fontWeight: 'bold'
+    cursor: 'pointer', fontWeight: 'bold', whiteSpace: 'nowrap'
   },
   commentBtn: {
-    padding: '4px 10px', fontSize: 12, color: '#fff',
+    padding: '3px 8px', fontSize: 11, color: '#fff',
     background: '#6c757d', border: 'none', borderRadius: 3,
-    cursor: 'pointer', fontWeight: 'bold'
+    cursor: 'pointer', fontWeight: 'bold', whiteSpace: 'nowrap'
   }
 };
 
@@ -140,7 +140,7 @@ function PartyTable({ parties, onDelete }) {
   );
 }
 
-// ─── TxTable (ALL TRANSACTIONS - Edit, Delete, Comment columns reordered) ─────────
+// ─��─ TxTable (ALL TRANSACTIONS - Compact) ─────────
 function TxTable({ transactions, onEdit, onComment, onDelete }) {
   const sorted = [...transactions].sort((a, b) => new Date(b.date) - new Date(a.date));
 
@@ -159,53 +159,42 @@ function TxTable({ transactions, onEdit, onComment, onDelete }) {
   });
 
   return (
-    <div style={{ overflowX: 'auto', marginTop: 16 }}>
-      <table className="transaction-table" style={{ minWidth: 1400 }}>
+    <div style={{ overflowX: 'auto', marginTop: 16, width: '100%' }}>
+      <table className="transaction-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
         <thead>
           <tr>
-            <th>Date</th><th>Party</th><th>Type</th><th>Bill No</th>
-            <th>Method</th><th>Check No</th><th>Amount</th><th>GST</th>
-            <th>Debit</th><th>Credit</th><th>Balance</th>
-            <th>Edit</th><th>Delete</th><th>Comment</th>
+            <th style={{ fontSize: '12px', padding: '6px' }}>Date</th>
+            <th style={{ fontSize: '12px', padding: '6px' }}>Party</th>
+            <th style={{ fontSize: '12px', padding: '6px' }}>Type</th>
+            <th style={{ fontSize: '12px', padding: '6px' }}>Amount</th>
+            <th style={{ fontSize: '12px', padding: '6px' }}>Balance</th>
+            <th style={{ fontSize: '12px', padding: '6px' }}>Edit</th>
+            <th style={{ fontSize: '12px', padding: '6px' }}>Delete</th>
+            <th style={{ fontSize: '12px', padding: '6px' }}>Comment</th>
           </tr>
         </thead>
         <tbody>
           {sorted.length === 0
-            ? <tr><td colSpan={14} style={{ textAlign: 'center', color: '#888', padding: 20 }}>No transactions found.</td></tr>
+            ? <tr><td colSpan={8} style={{ textAlign: 'center', color: '#888', padding: 20 }}>No transactions found.</td></tr>
             : sorted.map((tx, i) => {
               const isPurchase = tx.type === 'purchase';
               const isPayRet   = tx.type === 'payment' || tx.type === 'return';
-              const gst = isPurchase
-                ? '₹' + (tx.gstAmount !== undefined
-                    ? Number(tx.gstAmount).toFixed(2)
-                    : ((toNum(tx.amount) / 1.05) * 0.05).toFixed(2))
-                : '-';
               return (
-                <tr key={tx.id || i}>
-                  <td>{tx.date}</td>
-                  <td>{tx.party}</td>
-                  <td style={{ textTransform: 'capitalize' }}>{tx.type}</td>
-                  <td>{tx.billNumber || '-'}</td>
-                  <td>{tx.method || '-'}</td>
-                  <td>{tx.method === 'Check' && tx.checkNumber ? tx.checkNumber : '-'}</td>
-                  <td>₹{toNum(tx.amount).toFixed(2)}</td>
-                  <td>{gst}</td>
-                  <td style={{ color: isPurchase ? '#c0392b' : undefined }}>
-                    {isPurchase ? '₹' + toNum(tx.amount).toFixed(2) : '-'}
-                  </td>
-                  <td style={{ color: isPayRet ? '#27ae60' : undefined }}>
-                    {isPayRet ? '₹' + toNum(tx.amount).toFixed(2) : '-'}
-                  </td>
-                  <td>₹{balMap[tx.id] !== undefined ? toNum(balMap[tx.id]).toFixed(2) : '-'}</td>
-                  <td>
+                <tr key={tx.id || i} style={{ fontSize: '12px' }}>
+                  <td style={{ padding: '4px 6px' }}>{tx.date}</td>
+                  <td style={{ padding: '4px 6px' }}>{tx.party}</td>
+                  <td style={{ padding: '4px 6px', textTransform: 'capitalize' }}>{tx.type}</td>
+                  <td style={{ padding: '4px 6px' }}>₹{toNum(tx.amount).toFixed(2)}</td>
+                  <td style={{ padding: '4px 6px' }}>₹{balMap[tx.id] !== undefined ? toNum(balMap[tx.id]).toFixed(2) : '-'}</td>
+                  <td style={{ padding: '4px 6px', textAlign: 'center' }}>
                     <button style={S.editBtn} onClick={() => onEdit && onEdit(tx)}>✏ Edit</button>
                   </td>
-                  <td>
+                  <td style={{ padding: '4px 6px', textAlign: 'center' }}>
                     <button style={S.delBtn} onClick={() => onDelete && onDelete(tx)}>🗑 Delete</button>
                   </td>
-                  <td>
+                  <td style={{ padding: '4px 6px', textAlign: 'center' }}>
                     {tx.comment
-                      ? <button style={S.commentBtn} onClick={() => onComment && onComment(tx)}>💬 Comment</button>
+                      ? <button style={S.commentBtn} onClick={() => onComment && onComment(tx)}>💬</button>
                       : '-'}
                   </td>
                 </tr>
@@ -217,40 +206,42 @@ function TxTable({ transactions, onEdit, onComment, onDelete }) {
   );
 }
 
-// ─── PURCHASE TRANSACTION TABLE (Edit, Delete, Comment) ─────
+// ─── PURCHASE TRANSACTION TABLE (Compact) ─────
 function PurchaseTransactionTable({ transactions, onEdit, onComment, onDelete }) {
   const sorted = [...transactions].sort((a, b) => new Date(b.date) - new Date(a.date));
 
   return (
-    <div style={{ overflowX: 'auto', marginTop: 16 }}>
-      <table className="transaction-table" style={{ minWidth: 1000 }}>
+    <div style={{ overflowX: 'auto', marginTop: 16, width: '100%' }}>
+      <table className="transaction-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
         <thead>
           <tr>
-            <th>Date</th><th>Party</th><th>Bill No</th>
-            <th>Base Amount</th><th>GST (5%)</th><th>Total Amount</th>
-            <th>Edit</th><th>Delete</th><th>Comment</th>
+            <th style={{ fontSize: '12px', padding: '6px' }}>Date</th>
+            <th style={{ fontSize: '12px', padding: '6px' }}>Party</th>
+            <th style={{ fontSize: '12px', padding: '6px' }}>Bill No</th>
+            <th style={{ fontSize: '12px', padding: '6px' }}>Amount</th>
+            <th style={{ fontSize: '12px', padding: '6px' }}>Edit</th>
+            <th style={{ fontSize: '12px', padding: '6px' }}>Delete</th>
+            <th style={{ fontSize: '12px', padding: '6px' }}>Comment</th>
           </tr>
         </thead>
         <tbody>
           {sorted.length === 0
-            ? <tr><td colSpan={9} style={{ textAlign: 'center', color: '#888', padding: 20 }}>No purchase transactions found.</td></tr>
+            ? <tr><td colSpan={7} style={{ textAlign: 'center', color: '#888', padding: 20 }}>No purchase transactions found.</td></tr>
             : sorted.map((tx, i) => (
-              <tr key={tx.id || i}>
-                <td>{tx.date}</td>
-                <td>{tx.party}</td>
-                <td>{tx.billNumber || '-'}</td>
-                <td>₹{toNum(tx.baseAmount || 0).toFixed(2)}</td>
-                <td>₹{toNum(tx.gstAmount || 0).toFixed(2)}</td>
-                <td>₹{toNum(tx.amount).toFixed(2)}</td>
-                <td>
+              <tr key={tx.id || i} style={{ fontSize: '12px' }}>
+                <td style={{ padding: '4px 6px' }}>{tx.date}</td>
+                <td style={{ padding: '4px 6px' }}>{tx.party}</td>
+                <td style={{ padding: '4px 6px' }}>{tx.billNumber || '-'}</td>
+                <td style={{ padding: '4px 6px' }}>₹{toNum(tx.amount).toFixed(2)}</td>
+                <td style={{ padding: '4px 6px', textAlign: 'center' }}>
                   <button style={S.editBtn} onClick={() => onEdit && onEdit(tx)}>✏ Edit</button>
                 </td>
-                <td>
+                <td style={{ padding: '4px 6px', textAlign: 'center' }}>
                   <button style={S.delBtn} onClick={() => onDelete && onDelete(tx)}>🗑 Delete</button>
                 </td>
-                <td>
+                <td style={{ padding: '4px 6px', textAlign: 'center' }}>
                   {tx.comment
-                    ? <button style={S.commentBtn} onClick={() => onComment && onComment(tx)}>💬 Comment</button>
+                    ? <button style={S.commentBtn} onClick={() => onComment && onComment(tx)}>💬</button>
                     : '-'}
                 </td>
               </tr>
@@ -261,39 +252,44 @@ function PurchaseTransactionTable({ transactions, onEdit, onComment, onDelete })
   );
 }
 
-// ─── PAYMENT TRANSACTION TABLE (Edit, Delete, Comment) ─────
+// ─── PAYMENT TRANSACTION TABLE (Compact) ─────
 function PaymentTransactionTable({ transactions, onEdit, onComment, onDelete }) {
   const sorted = [...transactions].sort((a, b) => new Date(b.date) - new Date(a.date));
 
   return (
-    <div style={{ overflowX: 'auto', marginTop: 16 }}>
-      <table className="transaction-table" style={{ minWidth: 900 }}>
+    <div style={{ overflowX: 'auto', marginTop: 16, width: '100%' }}>
+      <table className="transaction-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
         <thead>
           <tr>
-            <th>Date</th><th>Party</th><th>Method</th>
-            <th>Check No</th><th>Amount</th>
-            <th>Edit</th><th>Delete</th><th>Comment</th>
+            <th style={{ fontSize: '12px', padding: '6px' }}>Date</th>
+            <th style={{ fontSize: '12px', padding: '6px' }}>Party</th>
+            <th style={{ fontSize: '12px', padding: '6px' }}>Method</th>
+            <th style={{ fontSize: '12px', padding: '6px' }}>Check No</th>
+            <th style={{ fontSize: '12px', padding: '6px' }}>Amount</th>
+            <th style={{ fontSize: '12px', padding: '6px' }}>Edit</th>
+            <th style={{ fontSize: '12px', padding: '6px' }}>Delete</th>
+            <th style={{ fontSize: '12px', padding: '6px' }}>Comment</th>
           </tr>
         </thead>
         <tbody>
           {sorted.length === 0
             ? <tr><td colSpan={8} style={{ textAlign: 'center', color: '#888', padding: 20 }}>No payment transactions found.</td></tr>
             : sorted.map((tx, i) => (
-              <tr key={tx.id || i}>
-                <td>{tx.date}</td>
-                <td>{tx.party}</td>
-                <td>{tx.method || '-'}</td>
-                <td>{tx.checkNumber || '-'}</td>
-                <td style={{ color: '#27ae60' }}>₹{toNum(tx.amount).toFixed(2)}</td>
-                <td>
+              <tr key={tx.id || i} style={{ fontSize: '12px' }}>
+                <td style={{ padding: '4px 6px' }}>{tx.date}</td>
+                <td style={{ padding: '4px 6px' }}>{tx.party}</td>
+                <td style={{ padding: '4px 6px' }}>{tx.method || '-'}</td>
+                <td style={{ padding: '4px 6px' }}>{tx.checkNumber || '-'}</td>
+                <td style={{ padding: '4px 6px', color: '#27ae60' }}>₹{toNum(tx.amount).toFixed(2)}</td>
+                <td style={{ padding: '4px 6px', textAlign: 'center' }}>
                   <button style={S.editBtn} onClick={() => onEdit && onEdit(tx)}>✏ Edit</button>
                 </td>
-                <td>
+                <td style={{ padding: '4px 6px', textAlign: 'center' }}>
                   <button style={S.delBtn} onClick={() => onDelete && onDelete(tx)}>🗑 Delete</button>
                 </td>
-                <td>
+                <td style={{ padding: '4px 6px', textAlign: 'center' }}>
                   {tx.comment
-                    ? <button style={S.commentBtn} onClick={() => onComment && onComment(tx)}>💬 Comment</button>
+                    ? <button style={S.commentBtn} onClick={() => onComment && onComment(tx)}>💬</button>
                     : '-'}
                 </td>
               </tr>
@@ -304,39 +300,40 @@ function PaymentTransactionTable({ transactions, onEdit, onComment, onDelete }) 
   );
 }
 
-// ─── RETURN TRANSACTION TABLE (Edit, Delete, Comment) ─────
+// ─── RETURN TRANSACTION TABLE (Compact) ─────
 function ReturnTransactionTable({ transactions, onEdit, onComment, onDelete }) {
   const sorted = [...transactions].sort((a, b) => new Date(b.date) - new Date(a.date));
 
   return (
-    <div style={{ overflowX: 'auto', marginTop: 16 }}>
-      <table className="transaction-table" style={{ minWidth: 1000 }}>
+    <div style={{ overflowX: 'auto', marginTop: 16, width: '100%' }}>
+      <table className="transaction-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
         <thead>
           <tr>
-            <th>Date</th><th>Party</th><th>Bill No</th>
-            <th>Comment</th><th>Amount</th>
-            <th>Edit</th><th>Delete</th><th>View Details</th>
+            <th style={{ fontSize: '12px', padding: '6px' }}>Date</th>
+            <th style={{ fontSize: '12px', padding: '6px' }}>Party</th>
+            <th style={{ fontSize: '12px', padding: '6px' }}>Amount</th>
+            <th style={{ fontSize: '12px', padding: '6px' }}>Edit</th>
+            <th style={{ fontSize: '12px', padding: '6px' }}>Delete</th>
+            <th style={{ fontSize: '12px', padding: '6px' }}>Details</th>
           </tr>
         </thead>
         <tbody>
           {sorted.length === 0
-            ? <tr><td colSpan={8} style={{ textAlign: 'center', color: '#888', padding: 20 }}>No return transactions found.</td></tr>
+            ? <tr><td colSpan={6} style={{ textAlign: 'center', color: '#888', padding: 20 }}>No return transactions found.</td></tr>
             : sorted.map((tx, i) => (
-              <tr key={tx.id || i}>
-                <td>{tx.date}</td>
-                <td>{tx.party}</td>
-                <td>{tx.billNumber || '-'}</td>
-                <td>{tx.comment || '-'}</td>
-                <td style={{ color: '#c0392b' }}>₹{toNum(tx.amount).toFixed(2)}</td>
-                <td>
+              <tr key={tx.id || i} style={{ fontSize: '12px' }}>
+                <td style={{ padding: '4px 6px' }}>{tx.date}</td>
+                <td style={{ padding: '4px 6px' }}>{tx.party}</td>
+                <td style={{ padding: '4px 6px', color: '#c0392b' }}>₹{toNum(tx.amount).toFixed(2)}</td>
+                <td style={{ padding: '4px 6px', textAlign: 'center' }}>
                   <button style={S.editBtn} onClick={() => onEdit && onEdit(tx)}>✏ Edit</button>
                 </td>
-                <td>
+                <td style={{ padding: '4px 6px', textAlign: 'center' }}>
                   <button style={S.delBtn} onClick={() => onDelete && onDelete(tx)}>🗑 Delete</button>
                 </td>
-                <td>
+                <td style={{ padding: '4px 6px', textAlign: 'center' }}>
                   {tx.comment
-                    ? <button style={S.commentBtn} onClick={() => onComment && onComment(tx)}>💬 View</button>
+                    ? <button style={S.commentBtn} onClick={() => onComment && onComment(tx)}>💬</button>
                     : '-'}
                 </td>
               </tr>
@@ -347,7 +344,7 @@ function ReturnTransactionTable({ transactions, onEdit, onComment, onDelete }) {
   );
 }
 
-// ─── BALANCE TRANSACTION TABLE (Edit, Delete, Comment) ─────
+// ─── BALANCE TRANSACTION TABLE (Compact) ─────
 function BalanceTransactionTable({ transactions, onEdit, onComment, onDelete }) {
   const sorted = [...transactions].sort((a, b) => new Date(b.date) - new Date(a.date));
 
@@ -366,34 +363,39 @@ function BalanceTransactionTable({ transactions, onEdit, onComment, onDelete }) 
   });
 
   return (
-    <div style={{ overflowX: 'auto', marginTop: 16 }}>
-      <table className="transaction-table" style={{ minWidth: 900 }}>
+    <div style={{ overflowX: 'auto', marginTop: 16, width: '100%' }}>
+      <table className="transaction-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
         <thead>
           <tr>
-            <th>Date</th><th>Party</th><th>Type</th>
-            <th>Amount</th><th>Balance</th>
-            <th>Edit</th><th>Delete</th><th>Comment</th>
+            <th style={{ fontSize: '12px', padding: '6px' }}>Date</th>
+            <th style={{ fontSize: '12px', padding: '6px' }}>Party</th>
+            <th style={{ fontSize: '12px', padding: '6px' }}>Type</th>
+            <th style={{ fontSize: '12px', padding: '6px' }}>Amount</th>
+            <th style={{ fontSize: '12px', padding: '6px' }}>Balance</th>
+            <th style={{ fontSize: '12px', padding: '6px' }}>Edit</th>
+            <th style={{ fontSize: '12px', padding: '6px' }}>Delete</th>
+            <th style={{ fontSize: '12px', padding: '6px' }}>Comment</th>
           </tr>
         </thead>
         <tbody>
           {sorted.length === 0
             ? <tr><td colSpan={8} style={{ textAlign: 'center', color: '#888', padding: 20 }}>No transactions found.</td></tr>
             : sorted.map((tx, i) => (
-              <tr key={tx.id || i}>
-                <td>{tx.date}</td>
-                <td>{tx.party}</td>
-                <td style={{ textTransform: 'capitalize' }}>{tx.type}</td>
-                <td>₹{toNum(tx.amount).toFixed(2)}</td>
-                <td>₹{balMap[tx.id] !== undefined ? toNum(balMap[tx.id]).toFixed(2) : '-'}</td>
-                <td>
+              <tr key={tx.id || i} style={{ fontSize: '12px' }}>
+                <td style={{ padding: '4px 6px' }}>{tx.date}</td>
+                <td style={{ padding: '4px 6px' }}>{tx.party}</td>
+                <td style={{ padding: '4px 6px', textTransform: 'capitalize' }}>{tx.type}</td>
+                <td style={{ padding: '4px 6px' }}>₹{toNum(tx.amount).toFixed(2)}</td>
+                <td style={{ padding: '4px 6px' }}>₹{balMap[tx.id] !== undefined ? toNum(balMap[tx.id]).toFixed(2) : '-'}</td>
+                <td style={{ padding: '4px 6px', textAlign: 'center' }}>
                   <button style={S.editBtn} onClick={() => onEdit && onEdit(tx)}>✏ Edit</button>
                 </td>
-                <td>
+                <td style={{ padding: '4px 6px', textAlign: 'center' }}>
                   <button style={S.delBtn} onClick={() => onDelete && onDelete(tx)}>🗑 Delete</button>
                 </td>
-                <td>
+                <td style={{ padding: '4px 6px', textAlign: 'center' }}>
                   {tx.comment
-                    ? <button style={S.commentBtn} onClick={() => onComment && onComment(tx)}>💬 Comment</button>
+                    ? <button style={S.commentBtn} onClick={() => onComment && onComment(tx)}>💬</button>
                     : '-'}
                 </td>
               </tr>
@@ -950,22 +952,28 @@ export default function HomePage() {
 
             <h3 style={{ marginTop: 24 }}>Bank Ledger</h3>
             <div style={{ overflowX: 'auto', marginTop: 16 }}>
-              <table className="transaction-table" style={{ minWidth: 900 }}>
+              <table className="transaction-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead><tr>
-                  <th>Date</th><th>Party</th><th>Method</th><th>Check No</th>
-                  <th>Debit</th><th>Credit</th><th>Balance</th><th>Delete</th>
+                  <th style={{ fontSize: '12px', padding: '6px' }}>Date</th>
+                  <th style={{ fontSize: '12px', padding: '6px' }}>Party</th>
+                  <th style={{ fontSize: '12px', padding: '6px' }}>Method</th>
+                  <th style={{ fontSize: '12px', padding: '6px' }}>Check No</th>
+                  <th style={{ fontSize: '12px', padding: '6px' }}>Debit</th>
+                  <th style={{ fontSize: '12px', padding: '6px' }}>Credit</th>
+                  <th style={{ fontSize: '12px', padding: '6px' }}>Balance</th>
+                  <th style={{ fontSize: '12px', padding: '6px' }}>Delete</th>
                 </tr></thead>
                 <tbody>
                   {getBankLedger().map((e, i) => (
-                    <tr key={i}>
-                      <td>{new Date(e.date).toLocaleDateString('en-IN')}</td>
-                      <td>{e.party}</td>
-                      <td>{e.method}</td>
-                      <td>{e.checkNumber || '-'}</td>
-                      <td style={{ color: e.debit  ? '#c0392b' : undefined }}>{e.debit  ? '₹' + e.debit.toFixed(2)  : '-'}</td>
-                      <td style={{ color: e.credit ? '#27ae60' : undefined }}>{e.credit ? '₹' + e.credit.toFixed(2) : '-'}</td>
-                      <td>₹{e.balance.toFixed(2)}</td>
-                      <td>
+                    <tr key={i} style={{ fontSize: '12px' }}>
+                      <td style={{ padding: '4px 6px' }}>{new Date(e.date).toLocaleDateString('en-IN')}</td>
+                      <td style={{ padding: '4px 6px' }}>{e.party}</td>
+                      <td style={{ padding: '4px 6px' }}>{e.method}</td>
+                      <td style={{ padding: '4px 6px' }}>{e.checkNumber || '-'}</td>
+                      <td style={{ padding: '4px 6px', color: e.debit  ? '#c0392b' : undefined }}>{e.debit  ? '₹' + e.debit.toFixed(2)  : '-'}</td>
+                      <td style={{ padding: '4px 6px', color: e.credit ? '#27ae60' : undefined }}>{e.credit ? '₹' + e.credit.toFixed(2) : '-'}</td>
+                      <td style={{ padding: '4px 6px' }}>₹{e.balance.toFixed(2)}</td>
+                      <td style={{ padding: '4px 6px', textAlign: 'center' }}>
                         {!e.isPaymentDeduction && e.source === 'bankDeposits'
                           ? <button style={S.delBtn} onClick={() => handleDeleteDeposit(e)}>🗑 Delete</button>
                           : '-'}
