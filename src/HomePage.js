@@ -33,7 +33,7 @@ const S = {
   delBtn: {
     padding: '4px 10px', fontSize: 12, color: '#fff',
     background: '#dc3545', border: 'none', borderRadius: 3,
-    cursor: 'pointer', fontWeight: 'bold', marginLeft: 4
+    cursor: 'pointer', fontWeight: 'bold'
   },
   editBtn: {
     padding: '4px 10px', fontSize: 12, color: '#fff',
@@ -93,7 +93,7 @@ function CommentModal({ tx, onClose }) {
   );
 }
 
-// ─── PartyTable (with DELETE button) ───────────────────────────────────────────
+// ─── PartyTable ───────────────────────────────────────────────────────────────
 function PartyTable({ parties, onDelete }) {
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
@@ -140,7 +140,7 @@ function PartyTable({ parties, onDelete }) {
   );
 }
 
-// ─── TxTable (All Transactions - with Edit + Delete + Comment buttons) ───────────
+// ─── TxTable (ALL TRANSACTIONS - Edit, Delete, Comment columns reordered) ─────────
 function TxTable({ transactions, onEdit, onComment, onDelete }) {
   const sorted = [...transactions].sort((a, b) => new Date(b.date) - new Date(a.date));
 
@@ -159,8 +159,8 @@ function TxTable({ transactions, onEdit, onComment, onDelete }) {
   });
 
   return (
-    <div style={{ overflowX: 'auto' }}>
-      <table className="transaction-table" style={{ minWidth: 1500 }}>
+    <div style={{ overflowX: 'auto', marginTop: 16 }}>
+      <table className="transaction-table" style={{ minWidth: 1400 }}>
         <thead>
           <tr>
             <th>Date</th><th>Party</th><th>Type</th><th>Bill No</th>
@@ -217,12 +217,12 @@ function TxTable({ transactions, onEdit, onComment, onDelete }) {
   );
 }
 
-// ─── PurchaseTransactionTable (Purchase History - with Edit + Delete + Comment buttons) ─────
+// ─── PURCHASE TRANSACTION TABLE (Edit, Delete, Comment) ─────
 function PurchaseTransactionTable({ transactions, onEdit, onComment, onDelete }) {
   const sorted = [...transactions].sort((a, b) => new Date(b.date) - new Date(a.date));
 
   return (
-    <div style={{ overflowX: 'auto' }}>
+    <div style={{ overflowX: 'auto', marginTop: 16 }}>
       <table className="transaction-table" style={{ minWidth: 1000 }}>
         <thead>
           <tr>
@@ -239,8 +239,8 @@ function PurchaseTransactionTable({ transactions, onEdit, onComment, onDelete })
                 <td>{tx.date}</td>
                 <td>{tx.party}</td>
                 <td>{tx.billNumber || '-'}</td>
-                <td>₹{toNum(tx.baseAmount).toFixed(2)}</td>
-                <td>₹{toNum(tx.gstAmount).toFixed(2)}</td>
+                <td>₹{toNum(tx.baseAmount || 0).toFixed(2)}</td>
+                <td>₹{toNum(tx.gstAmount || 0).toFixed(2)}</td>
                 <td>₹{toNum(tx.amount).toFixed(2)}</td>
                 <td>
                   <button style={S.editBtn} onClick={() => onEdit && onEdit(tx)}>✏ Edit</button>
@@ -261,12 +261,12 @@ function PurchaseTransactionTable({ transactions, onEdit, onComment, onDelete })
   );
 }
 
-// ─── PaymentTransactionTable (Payment History - with Edit + Delete + Comment buttons) ─────
+// ─── PAYMENT TRANSACTION TABLE (Edit, Delete, Comment) ─────
 function PaymentTransactionTable({ transactions, onEdit, onComment, onDelete }) {
   const sorted = [...transactions].sort((a, b) => new Date(b.date) - new Date(a.date));
 
   return (
-    <div style={{ overflowX: 'auto' }}>
+    <div style={{ overflowX: 'auto', marginTop: 16 }}>
       <table className="transaction-table" style={{ minWidth: 900 }}>
         <thead>
           <tr>
@@ -304,12 +304,12 @@ function PaymentTransactionTable({ transactions, onEdit, onComment, onDelete }) 
   );
 }
 
-// ─── ReturnTransactionTable (Return History - with Edit + Delete + Comment buttons) ──────
+// ─── RETURN TRANSACTION TABLE (Edit, Delete, Comment) ─────
 function ReturnTransactionTable({ transactions, onEdit, onComment, onDelete }) {
   const sorted = [...transactions].sort((a, b) => new Date(b.date) - new Date(a.date));
 
   return (
-    <div style={{ overflowX: 'auto' }}>
+    <div style={{ overflowX: 'auto', marginTop: 16 }}>
       <table className="transaction-table" style={{ minWidth: 1000 }}>
         <thead>
           <tr>
@@ -347,7 +347,7 @@ function ReturnTransactionTable({ transactions, onEdit, onComment, onDelete }) {
   );
 }
 
-// ─── BalanceTransactionTable (Balance History - with Edit + Delete + Comment buttons) ────
+// ─── BALANCE TRANSACTION TABLE (Edit, Delete, Comment) ─────
 function BalanceTransactionTable({ transactions, onEdit, onComment, onDelete }) {
   const sorted = [...transactions].sort((a, b) => new Date(b.date) - new Date(a.date));
 
@@ -366,8 +366,8 @@ function BalanceTransactionTable({ transactions, onEdit, onComment, onDelete }) 
   });
 
   return (
-    <div style={{ overflowX: 'auto' }}>
-      <table className="transaction-table" style={{ minWidth: 1000 }}>
+    <div style={{ overflowX: 'auto', marginTop: 16 }}>
+      <table className="transaction-table" style={{ minWidth: 900 }}>
         <thead>
           <tr>
             <th>Date</th><th>Party</th><th>Type</th>
@@ -752,7 +752,7 @@ export default function HomePage() {
         {/* ── Comment Modal ── */}
         <CommentModal tx={commentTx} onClose={() => setCommentTx(null)} />
 
-        {/* ══════════ HOME (All Transactions Table with Edit/Delete/Comment) ══════════ */}
+        {/* ══════════ HOME - ALL TRANSACTIONS TABLE ══════════ */}
         {view === 'home' && (
           <>
             <h1>SANJIVANI SADI</h1>
@@ -773,7 +773,7 @@ export default function HomePage() {
           </>
         )}
 
-        {/* ══════════ PURCHASE (Purchase Transaction History with Edit/Delete/Comment) ══════════ */}
+        {/* ══════════ PURCHASE - PURCHASE TRANSACTION HISTORY TABLE ══════════ */}
         {view === 'purchase' && (
           <div className="form-container">
             <h2>Purchase Entry</h2>
@@ -796,8 +796,8 @@ export default function HomePage() {
               label="Export Purchase PDF:" onExport={exportPurchasePDF} />
 
             {selectedParty && (
-              <div style={{ marginTop: 22 }}>
-                <h4>Purchase Transaction History</h4>
+              <div>
+                <h3>Purchase Transaction History</h3>
                 <PurchaseTransactionTable
                   transactions={purchases.filter(t => t.party === selectedParty)}
                   onEdit={openEdit}
@@ -809,7 +809,7 @@ export default function HomePage() {
           </div>
         )}
 
-        {/* ══════════ PAY (Payment Transaction History with Edit/Delete/Comment) ══════════ */}
+        {/* ══════════ PAY - PAYMENT TRANSACTION HISTORY TABLE ══════════ */}
         {view === 'pay' && (
           <div className="form-container">
             <h2>Payment Entry</h2>
@@ -839,8 +839,8 @@ export default function HomePage() {
               label="Export Payment PDF:" onExport={exportPaymentPDF} />
 
             {selectedParty && (
-              <div style={{ marginTop: 22 }}>
-                <h4>Payment Transaction History</h4>
+              <div>
+                <h3>Payment Transaction History</h3>
                 <PaymentTransactionTable
                   transactions={payments.filter(t => t.party === selectedParty)}
                   onEdit={openEdit}
@@ -852,7 +852,7 @@ export default function HomePage() {
           </div>
         )}
 
-        {/* ══════════ RETURN (Return Transaction History with Edit/Delete/Comment) ══════════ */}
+        {/* ══════════ RETURN - RETURN TRANSACTION HISTORY TABLE ══════════ */}
         {view === 'return' && (
           <div className="form-container">
             <h2>Return Entry</h2>
@@ -872,8 +872,8 @@ export default function HomePage() {
               label="Export Return PDF:" onExport={exportReturnPDF} />
 
             {selectedParty && (
-              <div style={{ marginTop: 22 }}>
-                <h4>Return Transaction History</h4>
+              <div>
+                <h3>Return Transaction History</h3>
                 <ReturnTransactionTable
                   transactions={returns.filter(t => t.party === selectedParty)}
                   onEdit={openEdit}
@@ -885,7 +885,7 @@ export default function HomePage() {
           </div>
         )}
 
-        {/* ══════════ BALANCE (Balance Transaction History with Edit/Delete/Comment) ══════════ */}
+        {/* ══════════ BALANCE - BALANCE TRANSACTION HISTORY TABLE ══════════ */}
         {view === 'balance' && (
           <div className="form-container">
             <h2>Balance Ledger</h2>
@@ -949,7 +949,7 @@ export default function HomePage() {
             <button className="addPurchase-button" onClick={handleDeposit} style={{ marginTop: 8 }}>Deposit</button>
 
             <h3 style={{ marginTop: 24 }}>Bank Ledger</h3>
-            <div style={{ overflowX: 'auto' }}>
+            <div style={{ overflowX: 'auto', marginTop: 16 }}>
               <table className="transaction-table" style={{ minWidth: 900 }}>
                 <thead><tr>
                   <th>Date</th><th>Party</th><th>Method</th><th>Check No</th>
