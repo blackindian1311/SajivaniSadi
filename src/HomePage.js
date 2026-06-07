@@ -93,7 +93,7 @@ function CommentModal({ tx, onClose }) {
   );
 }
 
-// ─── PartyTable ───────────────────────────────────────────────────────────────
+// ─── PartyTable (with DELETE button) ───────────────────────────────────────────
 function PartyTable({ parties, onDelete }) {
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
@@ -140,7 +140,7 @@ function PartyTable({ parties, onDelete }) {
   );
 }
 
-// ─── TxTable  (used everywhere — has Edit + Delete + Comment buttons) ─────────
+// ─── TxTable (All Transactions - with Edit + Delete + Comment buttons) ───────────
 function TxTable({ transactions, onEdit, onComment, onDelete }) {
   const sorted = [...transactions].sort((a, b) => new Date(b.date) - new Date(a.date));
 
@@ -211,6 +211,193 @@ function TxTable({ transactions, onEdit, onComment, onDelete }) {
                 </tr>
               );
             })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+// ─── PurchaseTransactionTable (Purchase History - with Edit + Delete + Comment buttons) ─────
+function PurchaseTransactionTable({ transactions, onEdit, onComment, onDelete }) {
+  const sorted = [...transactions].sort((a, b) => new Date(b.date) - new Date(a.date));
+
+  return (
+    <div style={{ overflowX: 'auto' }}>
+      <table className="transaction-table" style={{ minWidth: 1000 }}>
+        <thead>
+          <tr>
+            <th>Date</th><th>Party</th><th>Bill No</th>
+            <th>Base Amount</th><th>GST (5%)</th><th>Total Amount</th>
+            <th>Edit</th><th>Delete</th><th>Comment</th>
+          </tr>
+        </thead>
+        <tbody>
+          {sorted.length === 0
+            ? <tr><td colSpan={9} style={{ textAlign: 'center', color: '#888', padding: 20 }}>No purchase transactions found.</td></tr>
+            : sorted.map((tx, i) => (
+              <tr key={tx.id || i}>
+                <td>{tx.date}</td>
+                <td>{tx.party}</td>
+                <td>{tx.billNumber || '-'}</td>
+                <td>₹{toNum(tx.baseAmount).toFixed(2)}</td>
+                <td>₹{toNum(tx.gstAmount).toFixed(2)}</td>
+                <td>₹{toNum(tx.amount).toFixed(2)}</td>
+                <td>
+                  <button style={S.editBtn} onClick={() => onEdit && onEdit(tx)}>✏ Edit</button>
+                </td>
+                <td>
+                  <button style={S.delBtn} onClick={() => onDelete && onDelete(tx)}>🗑 Delete</button>
+                </td>
+                <td>
+                  {tx.comment
+                    ? <button style={S.commentBtn} onClick={() => onComment && onComment(tx)}>💬 Comment</button>
+                    : '-'}
+                </td>
+              </tr>
+            ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+// ─── PaymentTransactionTable (Payment History - with Edit + Delete + Comment buttons) ─────
+function PaymentTransactionTable({ transactions, onEdit, onComment, onDelete }) {
+  const sorted = [...transactions].sort((a, b) => new Date(b.date) - new Date(a.date));
+
+  return (
+    <div style={{ overflowX: 'auto' }}>
+      <table className="transaction-table" style={{ minWidth: 900 }}>
+        <thead>
+          <tr>
+            <th>Date</th><th>Party</th><th>Method</th>
+            <th>Check No</th><th>Amount</th>
+            <th>Edit</th><th>Delete</th><th>Comment</th>
+          </tr>
+        </thead>
+        <tbody>
+          {sorted.length === 0
+            ? <tr><td colSpan={8} style={{ textAlign: 'center', color: '#888', padding: 20 }}>No payment transactions found.</td></tr>
+            : sorted.map((tx, i) => (
+              <tr key={tx.id || i}>
+                <td>{tx.date}</td>
+                <td>{tx.party}</td>
+                <td>{tx.method || '-'}</td>
+                <td>{tx.checkNumber || '-'}</td>
+                <td style={{ color: '#27ae60' }}>₹{toNum(tx.amount).toFixed(2)}</td>
+                <td>
+                  <button style={S.editBtn} onClick={() => onEdit && onEdit(tx)}>✏ Edit</button>
+                </td>
+                <td>
+                  <button style={S.delBtn} onClick={() => onDelete && onDelete(tx)}>🗑 Delete</button>
+                </td>
+                <td>
+                  {tx.comment
+                    ? <button style={S.commentBtn} onClick={() => onComment && onComment(tx)}>💬 Comment</button>
+                    : '-'}
+                </td>
+              </tr>
+            ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+// ─── ReturnTransactionTable (Return History - with Edit + Delete + Comment buttons) ──────
+function ReturnTransactionTable({ transactions, onEdit, onComment, onDelete }) {
+  const sorted = [...transactions].sort((a, b) => new Date(b.date) - new Date(a.date));
+
+  return (
+    <div style={{ overflowX: 'auto' }}>
+      <table className="transaction-table" style={{ minWidth: 1000 }}>
+        <thead>
+          <tr>
+            <th>Date</th><th>Party</th><th>Bill No</th>
+            <th>Comment</th><th>Amount</th>
+            <th>Edit</th><th>Delete</th><th>View Details</th>
+          </tr>
+        </thead>
+        <tbody>
+          {sorted.length === 0
+            ? <tr><td colSpan={8} style={{ textAlign: 'center', color: '#888', padding: 20 }}>No return transactions found.</td></tr>
+            : sorted.map((tx, i) => (
+              <tr key={tx.id || i}>
+                <td>{tx.date}</td>
+                <td>{tx.party}</td>
+                <td>{tx.billNumber || '-'}</td>
+                <td>{tx.comment || '-'}</td>
+                <td style={{ color: '#c0392b' }}>₹{toNum(tx.amount).toFixed(2)}</td>
+                <td>
+                  <button style={S.editBtn} onClick={() => onEdit && onEdit(tx)}>✏ Edit</button>
+                </td>
+                <td>
+                  <button style={S.delBtn} onClick={() => onDelete && onDelete(tx)}>🗑 Delete</button>
+                </td>
+                <td>
+                  {tx.comment
+                    ? <button style={S.commentBtn} onClick={() => onComment && onComment(tx)}>💬 View</button>
+                    : '-'}
+                </td>
+              </tr>
+            ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+// ─── BalanceTransactionTable (Balance History - with Edit + Delete + Comment buttons) ────
+function BalanceTransactionTable({ transactions, onEdit, onComment, onDelete }) {
+  const sorted = [...transactions].sort((a, b) => new Date(b.date) - new Date(a.date));
+
+  // Calculate running balance
+  const balMap = {};
+  const byParty = {};
+  transactions.forEach(tx => { (byParty[tx.party] = byParty[tx.party] || []).push(tx); });
+  Object.values(byParty).forEach(list => {
+    list.sort((a, b) => new Date(a.date) - new Date(b.date));
+    let bal = 0;
+    list.forEach(tx => {
+      if (tx.type === 'purchase') bal += toNum(tx.amount);
+      else bal -= toNum(tx.amount);
+      balMap[tx.id] = bal;
+    });
+  });
+
+  return (
+    <div style={{ overflowX: 'auto' }}>
+      <table className="transaction-table" style={{ minWidth: 1000 }}>
+        <thead>
+          <tr>
+            <th>Date</th><th>Party</th><th>Type</th>
+            <th>Amount</th><th>Balance</th>
+            <th>Edit</th><th>Delete</th><th>Comment</th>
+          </tr>
+        </thead>
+        <tbody>
+          {sorted.length === 0
+            ? <tr><td colSpan={8} style={{ textAlign: 'center', color: '#888', padding: 20 }}>No transactions found.</td></tr>
+            : sorted.map((tx, i) => (
+              <tr key={tx.id || i}>
+                <td>{tx.date}</td>
+                <td>{tx.party}</td>
+                <td style={{ textTransform: 'capitalize' }}>{tx.type}</td>
+                <td>₹{toNum(tx.amount).toFixed(2)}</td>
+                <td>₹{balMap[tx.id] !== undefined ? toNum(balMap[tx.id]).toFixed(2) : '-'}</td>
+                <td>
+                  <button style={S.editBtn} onClick={() => onEdit && onEdit(tx)}>✏ Edit</button>
+                </td>
+                <td>
+                  <button style={S.delBtn} onClick={() => onDelete && onDelete(tx)}>🗑 Delete</button>
+                </td>
+                <td>
+                  {tx.comment
+                    ? <button style={S.commentBtn} onClick={() => onComment && onComment(tx)}>💬 Comment</button>
+                    : '-'}
+                </td>
+              </tr>
+            ))}
         </tbody>
       </table>
     </div>
@@ -565,7 +752,7 @@ export default function HomePage() {
         {/* ── Comment Modal ── */}
         <CommentModal tx={commentTx} onClose={() => setCommentTx(null)} />
 
-        {/* ══════════ HOME ══════════ */}
+        {/* ══════════ HOME (All Transactions Table with Edit/Delete/Comment) ══════════ */}
         {view === 'home' && (
           <>
             <h1>SANJIVANI SADI</h1>
@@ -586,7 +773,7 @@ export default function HomePage() {
           </>
         )}
 
-        {/* ══════════ PURCHASE ══════════ */}
+        {/* ══════════ PURCHASE (Purchase Transaction History with Edit/Delete/Comment) ══════════ */}
         {view === 'purchase' && (
           <div className="form-container">
             <h2>Purchase Entry</h2>
@@ -608,11 +795,21 @@ export default function HomePage() {
             <DateFilter from={pFrom} setFrom={setPFrom} to={pTo} setTo={setPTo}
               label="Export Purchase PDF:" onExport={exportPurchasePDF} />
 
-            {selectedParty && <RecentHistory type="purchase" />}
+            {selectedParty && (
+              <div style={{ marginTop: 22 }}>
+                <h4>Purchase Transaction History</h4>
+                <PurchaseTransactionTable
+                  transactions={purchases.filter(t => t.party === selectedParty)}
+                  onEdit={openEdit}
+                  onComment={setCommentTx}
+                  onDelete={handleDeleteTx}
+                />
+              </div>
+            )}
           </div>
         )}
 
-        {/* ══════════ PAY ══════════ */}
+        {/* ══════════ PAY (Payment Transaction History with Edit/Delete/Comment) ══════════ */}
         {view === 'pay' && (
           <div className="form-container">
             <h2>Payment Entry</h2>
@@ -641,11 +838,21 @@ export default function HomePage() {
             <DateFilter from={payFrom} setFrom={setPayFrom} to={payTo} setTo={setPayTo}
               label="Export Payment PDF:" onExport={exportPaymentPDF} />
 
-            {selectedParty && <RecentHistory type="payment" />}
+            {selectedParty && (
+              <div style={{ marginTop: 22 }}>
+                <h4>Payment Transaction History</h4>
+                <PaymentTransactionTable
+                  transactions={payments.filter(t => t.party === selectedParty)}
+                  onEdit={openEdit}
+                  onComment={setCommentTx}
+                  onDelete={handleDeleteTx}
+                />
+              </div>
+            )}
           </div>
         )}
 
-        {/* ══════════ RETURN ══════════ */}
+        {/* ══════════ RETURN (Return Transaction History with Edit/Delete/Comment) ══════════ */}
         {view === 'return' && (
           <div className="form-container">
             <h2>Return Entry</h2>
@@ -664,11 +871,21 @@ export default function HomePage() {
             <DateFilter from={rFrom} setFrom={setRFrom} to={rTo} setTo={setRTo}
               label="Export Return PDF:" onExport={exportReturnPDF} />
 
-            {selectedParty && <RecentHistory type="return" />}
+            {selectedParty && (
+              <div style={{ marginTop: 22 }}>
+                <h4>Return Transaction History</h4>
+                <ReturnTransactionTable
+                  transactions={returns.filter(t => t.party === selectedParty)}
+                  onEdit={openEdit}
+                  onComment={setCommentTx}
+                  onDelete={handleDeleteTx}
+                />
+              </div>
+            )}
           </div>
         )}
 
-        {/* ══════════ BALANCE ══════════ */}
+        {/* ══════════ BALANCE (Balance Transaction History with Edit/Delete/Comment) ══════════ */}
         {view === 'balance' && (
           <div className="form-container">
             <h2>Balance Ledger</h2>
@@ -679,7 +896,8 @@ export default function HomePage() {
             <DateFilter from={bFrom} setFrom={setBFrom} to={bTo} setTo={setBTo}
               label="Export Balance PDF:" onExport={exportBalancePDF} />
 
-            <TxTable
+            <h3>Balance Transaction History</h3>
+            <BalanceTransactionTable
               transactions={inRange(filteredTx, bFrom, bTo)}
               onEdit={openEdit}
               onComment={setCommentTx}
@@ -732,7 +950,7 @@ export default function HomePage() {
 
             <h3 style={{ marginTop: 24 }}>Bank Ledger</h3>
             <div style={{ overflowX: 'auto' }}>
-              <table className="transaction-table" style={{ minWidth: 820 }}>
+              <table className="transaction-table" style={{ minWidth: 900 }}>
                 <thead><tr>
                   <th>Date</th><th>Party</th><th>Method</th><th>Check No</th>
                   <th>Debit</th><th>Credit</th><th>Balance</th><th>Delete</th>
