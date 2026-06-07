@@ -68,11 +68,12 @@ body {
   background-color: #555;
 }
 
-/* ✅ FIX 1: Added overflow-x: auto so wide tables don't get clipped */
+/* ✅ FIXED: content allows overflow horizontally */
 .content {  
   flex-grow: 1;  
   padding: 20px;
   overflow-x: auto;
+  width: 100%;
 }
 
 h2 {  
@@ -157,6 +158,28 @@ select {
   background-color: #2e3d52;
 }
 
+.clearForm-button {
+  padding: 15px 85px;
+  font-size: 24px;
+  margin-top: 20px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-left: auto;
+  margin-right: auto;
+  border-radius: 0;
+  background-color: #555;
+  color: white;
+  border: none;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.clearForm-button:hover {
+  transform: scale(1.05);
+  background-color: #666;
+}
+
 button.medium-button {
   padding: 10px 15px;
   font-size: 16px;
@@ -201,14 +224,17 @@ button.large-button:hover {
 .transaction-table-wrapper, .partyInfoTable-wrapper {
   overflow-x: auto;
   margin-top: 20px;
+  width: 100%;
 }
 
+/* ✅ KEY FIX: Tables set to width: 100% so they expand with content */
 .transaction-table, .partyInfoTable {
   width: 100%;
   border-collapse: collapse;
   background-color: #1e2a38;
   color: #fff;
   font-size: 1rem;
+  min-width: 100%;
 }
 
 .transaction-table th,
@@ -218,6 +244,7 @@ button.large-button:hover {
   padding: 12px 15px;
   border: 1px solid #3a4a5a;
   text-align: center;
+  white-space: nowrap;
 }
 
 .transaction-table th {
@@ -269,18 +296,30 @@ h2 {
   margin-bottom: 40px;
 }
 
-/* ✅ FIX 2: max-width changed from 1000px to 100%, added overflow-x: auto */
+/* ✅ KEY FIX: form-container set to 100% width, no max-width limit */
 .form-container {
   background-color: #1e2a38;
   padding: 40px;
   border-radius: 1px;
   width: 100%;
-  max-width: 100%;
   margin: 0px auto;
   margin-top: 90px;
   color: #ffffff;
   box-shadow: 0 4px 10px rgba(0,0,0,0.2);
   overflow-x: auto;
+}
+
+.party-form {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  padding: 20px;
+  background-color: #2e3d52;
+  border-radius: 6px;
+}
+
+.party-form input {
+  margin: 5px 0;
 }
 
 .return-section {
@@ -359,6 +398,46 @@ h6 {
   .nrv-logo {
     font-size: 6vw;
   }
+
+  .home-page {
+    margin-left: 0;
+    padding: 0 15px;
+  }
+
+  .sidebar {
+    position: relative;
+    width: 100%;
+    height: auto;
+  }
+
+  .sidebar button {
+    padding: 15px 5px;
+    font-size: 16px;
+  }
+
+  .form-container {
+    padding: 20px;
+    margin-top: 40px;
+  }
+
+  h1 {
+    font-size: 40px;
+  }
+
+  h2, h3, h4 {
+    font-size: 30px;
+  }
+
+  .addPurchase-button, .newParty-button, .clearForm-button {
+    padding: 15px 30px;
+    font-size: 18px;
+  }
+
+  input,
+  select,
+  textarea {
+    width: 90%;
+  }
 }
 
 @media screen and (min-width: 1024px) {
@@ -398,48 +477,6 @@ h1 {
   box-sizing: border-box;
 }
 
-@media screen and (max-width: 768px) {
-  .home-page {
-    margin-left: 0;
-    padding: 0 15px;
-  }
-
-  .sidebar {
-    position: relative;
-    width: 100%;
-    height: auto;
-  }
-
-  .sidebar button {
-    padding: 15px 5px;
-    font-size: 16px;
-  }
-
-  .form-container {
-    padding: 20px;
-    margin-top: 40px;
-  }
-
-  h1 {
-    font-size: 40px;
-  }
-
-  h2, h3, h4 {
-    font-size: 30px;
-  }
-
-  .addPurchase-button, .newParty-button {
-    padding: 15px 30px;
-    font-size: 18px;
-  }
-
-  input,
-  select,
-  textarea {
-    width: 90%;
-  }
-}
-
 body::before {
   content: "NRV";
   position: fixed;
@@ -458,4 +495,18 @@ body::before {
 .main-content {
   position: relative;
   z-index: 1;
+}
+
+/* ✅ Modal styling */
+.modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
 }
