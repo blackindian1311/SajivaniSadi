@@ -19,16 +19,93 @@ const formatDate = (dateString) => {
   return `${dd}/${mm}/${yyyy}`;
 };
 
+
 const filterTransactionsByDate = (transactions, startDate, endDate) => {
-  if (!startDate || !endDate) return transactions;
-  const start = new Date(startDate);
-  const end = new Date(endDate);
-  end.setHours(23, 59, 59, 999);
-  return transactions.filter(tx => {
-    const txDate = new Date(tx.date);
-    return txDate >= start && txDate <= end;
+  const toDayKey = (value) => {
+    if (value == null || value === '') return null;
+
+    if (value && typeof value.toDate === 'function') {
+      value = value.toDate();
+    }
+
+    if (value instanceof Date) {
+      if (Number.isNaN(value.getTime())) return null;
+
+      const y = value.getFullYear();
+      const m = String(value.getMonth() + 1).padStart(2, '0');
+      const d = String(value.getDate()).padStart(2, '0');
+
+      return `${y}-${m}-${d}`;
+    }
+
+    if (typeof value === 'string') {
+      const input = value.trim();
+      let match = input.match(/^(\d{4})-(\d{2})-(\d{2})(?:$|T|\s)/);
+
+      if (!match) {
+        const legacy = input.match(/^(\d{2})[-/](\d{2})[-/](\d{4})$/);
+        if (legacy) {
+          match = [input, legacy[3], legacy[2], legacy[1]];
+        }
+      }
+
+      if (!match) return null;
+
+      const y = Number(match[1]);
+      const m = Number(match[2]);
+      const d = Number(match[3]);
+      const check = new Date(y, m - 1, d);
+
+      if (
+        m < 1 ||
+        m > 12 ||
+        d < 1 ||
+        check.getFullYear() !== y ||
+        check.getMonth() !== m - 1 ||
+        check.getDate() !== d
+      ) {
+        return null;
+      }
+
+      return `${match[1]}-${match[2]}-${match[3]}`;
+    }
+
+    if (typeof value === 'number' && Number.isFinite(value)) {
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) return null;
+
+      const y = date.getFullYear();
+      const m = String(date.getMonth() + 1).padStart(2, '0');
+      const d = String(date.getDate()).padStart(2, '0');
+
+      return `${y}-${m}-${d}`;
+    }
+
+    return null;
+  };
+
+  const start = startDate ? toDayKey(startDate) : null;
+  const end = endDate ? toDayKey(endDate) : null;
+
+  if (
+    (startDate && !start) ||
+    (endDate && !end) ||
+    (start && end && start > end)
+  ) {
+    return [];
+  }
+
+  return (Array.isArray(transactions) ? transactions : []).filter((tx) => {
+    const day = toDayKey(tx && tx.date);
+
+    if (!day) return false;
+    if (start && day < start) return false;
+    if (end && day > end) return false;
+
+    return true;
   });
 };
+
 
 const calculateRemainingSalary = (employee, salaryTransactions) => {
   if (!employee.salaryPeriodStart || !employee.salaryPeriodEnd || !employee.basicSalary) {
