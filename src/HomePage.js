@@ -668,13 +668,95 @@ const HomePage = () => {
     document.body.removeChild(a); URL.revokeObjectURL(url);
   };
 
-  const exportPurchaseHistory = (format) => {
-    const filtered = filterTransactionsByDate(purchaseTransactions.filter(tx => !selectedParty || tx.party === selectedParty), purchaseFilterStart, purchaseFilterEnd);
-    const headers = ['Date', 'Party', 'Amount', 'GST', 'Bill No', 'GST Applied', 'Comment'];
-    const data = filtered.map(tx => [formatDate(tx.date), tx.party, asNumber(tx.amount).toFixed(2), Number(tx.gstAmount || 0).toFixed(2), tx.billNumber || '-', tx.hasGST !== false ? 'Yes' : 'No', tx.comment || '-']);
-    if (format === 'csv') { downloadCSV('purchase_history.csv', [headers, ...data]); }
-    else { const d = new jsPDF(); d.text('Purchase History Report', 14, 15); autoTable(d, { startY: 25, head: [headers], body: data, theme: 'striped', headStyles: { fillColor: [41, 128, 185] } }); d.save('purchase_history.pdf'); }
-  };
+  
+const exportPurchaseHistory = (format) => {
+  const filtered = filterTransactionsByDate(
+    purchaseTransactions.filter(
+      tx => !selectedParty || tx.party === selectedParty
+    ),
+    purchaseFilterStart,
+    purchaseFilterEnd
+  );
+
+  // Sort transactions by date: oldest to newest
+  const sorted = [...filtered].sort((a, b) => {
+    const getTimestamp = (value) => {
+      if (value && typeof value.toDate === 'function') {
+        value = value.toDate();
+      }
+
+      if (value instanceof Date) {
+        return value.getTime();
+      }
+
+      if (typeof value === 'string') {
+        const date = value.trim();
+
+        // YYYY-MM-DD
+        if (/^\d{4}-\d{2}-\d{2}/.test(date)) {
+          return new Date(date).getTime();
+        }
+
+        // DD-MM-YYYY or DD/MM/YYYY
+        const match = date.match(/^(\d{2})[-/](\d{2})[-/](\d{4})$/);
+
+        if (match) {
+          return new Date(
+            Number(match[3]),
+            Number(match[2]) - 1,
+            Number(match[1])
+          ).getTime();
+        }
+      }
+
+      return NaN;
+    };
+
+    const dateA = getTimestamp(a.date);
+    const dateB = getTimestamp(b.date);
+
+    if (Number.isNaN(dateA)) return 1;
+    if (Number.isNaN(dateB)) return -1;
+
+    return dateA - dateB;
+  });
+
+  const headers = [
+    'Date',
+    'Party',
+    'Amount',
+    'GST',
+    'Bill No',
+    'GST Applied',
+    'Comment'
+  ];
+
+  const data = sorted.map(tx => [
+    formatDate(tx.date),
+    tx.party,
+    asNumber(tx.amount).toFixed(2),
+    Number(tx.gstAmount || 0).toFixed(2),
+    tx.billNumber || '-',
+    tx.hasGST !== false ? 'Yes' : 'No',
+    tx.comment || '-'
+  ]);
+
+  if (format === 'csv') {
+    downloadCSV('purchase_history.csv', [headers, ...data]);
+  } else {
+    const d = new jsPDF();
+    d.text('Purchase History Report', 14, 15);
+    autoTable(d, {
+      startY: 25,
+      head: [headers],
+      body: data,
+      theme: 'striped',
+      headStyles: { fillColor: [41, 128, 185] }
+    });
+    d.save('purchase_history.pdf');
+  }
+};
+
 
   const exportPaymentHistory = (format) => {
     const filtered = filterTransactionsByDate(paymentTransactions.filter(tx => !selectedParty || tx.party === selectedParty), paymentFilterStart, paymentFilterEnd);
